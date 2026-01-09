@@ -271,12 +271,12 @@
                 icon: "<?= base_url() ?>leaflet/leaflet-bmswitcher-main/example/assets/osm.png"
             },
             {
-                layer: L.tileLayer("http://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}.png", { attribution: "&copy; OpenStreetMap contributors", crossOrigin: true }),
+                layer: L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}.png", { attribution: "&copy; OpenStreetMap contributors", crossOrigin: true }),
                 name: "ArcGIS Online",
                 icon: "<?= base_url() ?>leaflet/leaflet-bmswitcher-main/example/assets/arcgis-online.png"
             },
             {
-                layer: L.tileLayer("http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}", { maxZoom: 22, subdomains: ['mt0', 'mt1', 'mt2', 'mt3'] }).addTo(map),
+                layer: L.tileLayer("https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}", { maxZoom: 22, subdomains: ['mt0', 'mt1', 'mt2', 'mt3'] }).addTo(map),
                 name: "Google Satellite",
                 icon: "<?= base_url() ?>leaflet/leaflet-bmswitcher-main/example/assets/google.png"
             },

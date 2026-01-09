@@ -4,88 +4,114 @@ namespace App\Database\Migrations;
 
 use CodeIgniter\Database\Migration;
 
-class CreateGeospasialTables extends Migration
+class FinalGeospasialSchema extends Migration
 {
     public function up()
     {
-        // ==========================================
-        // 1. TABEL POLIGON (Area)
-        // ==========================================
+        // =========================================================
+        // 1. TABEL GRUP (MASTER STYLE & KATEGORI)
+        // =========================================================
+        $this->forge->addField([
+            'id_dg' => [ 
+                'type' => 'INT', 'constraint' => 11, 'unsigned' => true, 'auto_increment' => true
+            ],
+            // Nama Grup/Kategori (Misal: "Jaringan Jalan", "Batas Desa")
+            'nama_grup' => [
+                'type' => 'VARCHAR', 'constraint' => '255',
+            ],
+            'jenis_peta' => [
+                'type' => 'ENUM', 'constraint' => ['Point', 'Line', 'Polygon'], 
+            ],
+            
+            // --- GLOBAL STYLE LEAFLET (Berlaku untuk satu grup) ---
+            'color'       => ['type' => 'VARCHAR', 'constraint' => '7', 'default' => '#3388ff'],
+            'weight'      => ['type' => 'INT', 'constraint' => 5, 'default' => 3],
+            'opacity'     => ['type' => 'DECIMAL', 'constraint' => '3,2', 'default' => 1.0],
+            'dashArray'   => ['type' => 'VARCHAR', 'constraint' => '20', 'null' => true],
+            'fillColor'   => ['type' => 'VARCHAR', 'constraint' => '7', 'default' => '#3388ff'],
+            'fillOpacity' => ['type' => 'DECIMAL', 'constraint' => '3,2', 'default' => 0.2],
+            'radius'      => ['type' => 'INT', 'constraint' => 5, 'default' => 10], // Khusus Point
+            
+            'created_at' => ['type' => 'DATETIME', 'null' => true],
+            'updated_at' => ['type' => 'DATETIME', 'null' => true],
+        ]);
+        $this->forge->addKey('id_dg', true);
+        $this->forge->createTable('geospasial_grup');
+
+
+        // =========================================================
+        // 2. TABEL POLIGON
+        // =========================================================
         $this->forge->addField([
             'id' => ['type' => 'INT', 'constraint' => 11, 'unsigned' => true, 'auto_increment' => true],
-            'nama' => ['type' => 'VARCHAR', 'constraint' => '255'],
-            'data_geospasial' => ['type' => 'TEXT'], // GeoJSON Polygon
-            'atribut_tambahan' => ['type' => 'JSON', 'null' => true],
             
-            // Style Leaflet untuk Polygon (Path options)
-            'color'       => ['type' => 'VARCHAR', 'constraint' => '7', 'default' => '#3388ff'], // Stroke color
-            'weight'      => ['type' => 'INT', 'constraint' => 5, 'default' => 3], // Stroke width
-            'opacity'     => ['type' => 'DECIMAL', 'constraint' => '3,2', 'default' => 1.0], // Stroke opacity
-            'dashArray'   => ['type' => 'VARCHAR', 'constraint' => '20', 'null' => true], // Putus-putus
-            'fillColor'   => ['type' => 'VARCHAR', 'constraint' => '7', 'default' => '#3388ff'], // Isi color
-            'fillOpacity' => ['type' => 'DECIMAL', 'constraint' => '3,2', 'default' => 0.2], // Isi opacity
+            // Penanda Masuk Grup Mana
+            'id_dg' => ['type' => 'INT', 'constraint' => 11, 'unsigned' => true],
+            
+            // REVISI: Menggunakan nama_dg (bukan nama_lokasi)
+            'nama_dg' => ['type' => 'VARCHAR', 'constraint' => '255'], 
+            
+            'data_geospasial' => ['type' => 'TEXT'], // GeoJSON
+            'atribut_tambahan' => ['type' => 'JSON', 'null' => true],
             
             'created_at' => ['type' => 'DATETIME', 'null' => true],
             'updated_at' => ['type' => 'DATETIME', 'null' => true],
         ]);
         $this->forge->addKey('id', true);
+        // Relasi ke tabel grup
+        $this->forge->addForeignKey('id_dg', 'geospasial_grup', 'id_dg', 'CASCADE', 'CASCADE');
         $this->forge->createTable('poligon');
 
-        // ==========================================
-        // 2. TABEL LINE (Garis / Polyline)
-        // ==========================================
-        // Catatan: Polyline di Leaflet tidak punya properti 'fill'
+
+        // =========================================================
+        // 3. TABEL LINE (POLYLINE)
+        // =========================================================
         $this->forge->addField([
             'id' => ['type' => 'INT', 'constraint' => 11, 'unsigned' => true, 'auto_increment' => true],
-            'nama' => ['type' => 'VARCHAR', 'constraint' => '255'],
-            'data_geospasial' => ['type' => 'TEXT'], // GeoJSON LineString
+            'id_dg' => ['type' => 'INT', 'constraint' => 11, 'unsigned' => true],
+            
+            // REVISI: Menggunakan nama_dg
+            'nama_dg' => ['type' => 'VARCHAR', 'constraint' => '255'],
+            
+            'data_geospasial' => ['type' => 'TEXT'], 
             'atribut_tambahan' => ['type' => 'JSON', 'null' => true],
-
-            // Style Leaflet untuk Polyline (Hanya Stroke)
-            'color'     => ['type' => 'VARCHAR', 'constraint' => '7', 'default' => '#ff7800'],
-            'weight'    => ['type' => 'INT', 'constraint' => 5, 'default' => 5],
-            'opacity'   => ['type' => 'DECIMAL', 'constraint' => '3,2', 'default' => 1.0],
-            'dashArray' => ['type' => 'VARCHAR', 'constraint' => '20', 'null' => true],
-            'lineCap'   => ['type' => 'VARCHAR', 'constraint' => '20', 'default' => 'round'], // round, butt, square
-            'lineJoin'  => ['type' => 'VARCHAR', 'constraint' => '20', 'default' => 'round'], // round, bevel, miter
             
             'created_at' => ['type' => 'DATETIME', 'null' => true],
             'updated_at' => ['type' => 'DATETIME', 'null' => true],
         ]);
         $this->forge->addKey('id', true);
+        $this->forge->addForeignKey('id_dg', 'geospasial_grup', 'id_dg', 'CASCADE', 'CASCADE');
         $this->forge->createTable('line');
 
-        // ==========================================
-        // 3. TABEL POINT (Titik / CircleMarker)
-        // ==========================================
-        // Kita gunakan style L.circleMarker agar bisa dicustom warna & ukurannya
+
+        // =========================================================
+        // 4. TABEL POINT (MARKER)
+        // =========================================================
         $this->forge->addField([
             'id' => ['type' => 'INT', 'constraint' => 11, 'unsigned' => true, 'auto_increment' => true],
-            'nama' => ['type' => 'VARCHAR', 'constraint' => '255'],
-            'data_geospasial' => ['type' => 'TEXT'], // GeoJSON Point
+            'id_dg' => ['type' => 'INT', 'constraint' => 11, 'unsigned' => true],
+            
+            // REVISI: Menggunakan nama_dg
+            'nama_dg' => ['type' => 'VARCHAR', 'constraint' => '255'],
+            
+            'data_geospasial' => ['type' => 'TEXT'], 
             'atribut_tambahan' => ['type' => 'JSON', 'null' => true],
-
-            // Style Leaflet untuk CircleMarker
-            'radius'      => ['type' => 'INT', 'constraint' => 5, 'default' => 10], // Ukuran lingkaran
-            'color'       => ['type' => 'VARCHAR', 'constraint' => '7', 'default' => '#3388ff'],
-            'weight'      => ['type' => 'INT', 'constraint' => 5, 'default' => 1], // Border width
-            'opacity'     => ['type' => 'DECIMAL', 'constraint' => '3,2', 'default' => 1.0],
-            'fillColor'   => ['type' => 'VARCHAR', 'constraint' => '7', 'default' => '#3388ff'],
-            'fillOpacity' => ['type' => 'DECIMAL', 'constraint' => '3,2', 'default' => 0.8],
             
             'created_at' => ['type' => 'DATETIME', 'null' => true],
             'updated_at' => ['type' => 'DATETIME', 'null' => true],
         ]);
         $this->forge->addKey('id', true);
+        $this->forge->addForeignKey('id_dg', 'geospasial_grup', 'id_dg', 'CASCADE', 'CASCADE');
         $this->forge->createTable('point');
 
-        // ==========================================
-        // 4. TABEL GEOSPASIAL PDF (Relasi Campuran)
-        // ==========================================
+
+        // =========================================================
+        // 5. TABEL PDF (MULTI RELASI)
+        // =========================================================
         $this->forge->addField([
             'id' => ['type' => 'INT', 'constraint' => 11, 'unsigned' => true, 'auto_increment' => true],
             
-            // Foreign Keys (Boleh NULL semua, tapi nanti divalidasi di aplikasi minimal satu terisi)
+            // Relasi ke masing-masing tabel data (Nullable)
             'poligon_id' => ['type' => 'INT', 'constraint' => 11, 'unsigned' => true, 'null' => true],
             'line_id'    => ['type' => 'INT', 'constraint' => 11, 'unsigned' => true, 'null' => true],
             'point_id'   => ['type' => 'INT', 'constraint' => 11, 'unsigned' => true, 'null' => true],
@@ -95,24 +121,19 @@ class CreateGeospasialTables extends Migration
             'created_at' => ['type' => 'DATETIME', 'null' => true],
         ]);
         $this->forge->addKey('id', true);
-
-        // Menambahkan Relasi Foreign Key dengan CASCADE
-        // Artinya: Hapus Poligon -> PDF terkait ikut terhapus
         $this->forge->addForeignKey('poligon_id', 'poligon', 'id', 'CASCADE', 'CASCADE');
         $this->forge->addForeignKey('line_id', 'line', 'id', 'CASCADE', 'CASCADE');
         $this->forge->addForeignKey('point_id', 'point', 'id', 'CASCADE', 'CASCADE');
-
+        
         $this->forge->createTable('geospasial_pdf');
     }
 
     public function down()
     {
-        // Hapus tabel PDF dulu karena memiliki Foreign Key
         $this->forge->dropTable('geospasial_pdf');
-        
-        // Baru hapus tabel master
         $this->forge->dropTable('point');
         $this->forge->dropTable('line');
         $this->forge->dropTable('poligon');
+        $this->forge->dropTable('geospasial_grup');
     }
 }

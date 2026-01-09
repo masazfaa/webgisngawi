@@ -219,11 +219,10 @@
 </div>
 
 <div class="modal fade" id="modalGrup" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
+    <div class="modal-dialog modal-xl"> <div class="modal-content">
             <form action="<?= base_url('geospasial/saveGrup') ?>" method="post">
                 <div class="modal-header">
-                    <h5 class="modal-title">Kelola Grup & Style Poligon</h5>
+                    <h5 class="modal-title">Kelola Grup Poligon</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
@@ -231,14 +230,26 @@
                     <input type="hidden" name="jenis_peta" value="Polygon">
 
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-md-4 border-end">
                             <div class="mb-3">
-                                <label>Nama Grup</label>
-                                <input type="text" name="nama_grup" id="grup_nama" class="form-control" required>
+                                <label class="fw-bold">Nama Grup</label>
+                                <input type="text" name="nama_grup" id="grup_nama" class="form-control" required placeholder="Contoh: Lahan Pertanian">
                             </div>
+
+                            <hr>
+                            <label class="fw-bold mb-2">Template Atribut (Default)</label>
+                            <p class="text-muted small mb-2">Tentukan kolom data yang wajib diisi saat membuat poligon baru di grup ini.</p>
                             
-                            <h6 class="border-bottom pb-1 mb-2">Konfigurasi Style</h6>
+                            <div id="template_container" class="mb-2" style="max-height: 200px; overflow-y: auto;">
+                                </div>
                             
+                            <button type="button" class="btn btn-sm btn-outline-success w-100" onclick="addTemplateRow()">
+                                <i class="fas fa-plus"></i> Tambah Kolom Atribut
+                            </button>
+                        </div>
+
+                        <div class="col-md-4 border-end">
+                            <h6 class="border-bottom pb-2 fw-bold">Pengaturan Style</h6>
                             <div class="row g-2">
                                 <div class="col-6">
                                     <label class="small">Warna Garis</label>
@@ -248,41 +259,37 @@
                                     <label class="small">Warna Isi</label>
                                     <input type="color" name="fillColor" id="style_fillColor" class="form-control form-control-color w-100" value="#3388ff">
                                 </div>
-                                
                                 <div class="col-6">
                                     <label class="small">Tebal Garis</label>
-                                    <input type="number" name="weight" id="style_weight" class="form-control form-control-sm" value="3" min="1">
+                                    <input type="number" name="weight" id="style_weight" class="form-control form-control-sm" value="3">
                                 </div>
                                 <div class="col-6">
                                     <label class="small">Tipe Garis</label>
                                     <select name="dashArray" id="style_dashArray" class="form-select form-select-sm">
-                                        <option value="">Solid (Lurus)</option>
-                                        <option value="5, 5">Dashed (Putus)</option>
-                                        <option value="1, 5">Dotted (Titik)</option>
-                                        <option value="10, 5">Long Dash</option>
+                                        <option value="">Solid</option>
+                                        <option value="5, 5">Putus-putus</option>
+                                        <option value="1, 5">Titik-titik</option>
                                     </select>
                                 </div>
-
                                 <div class="col-6">
-                                    <label class="small">Opacity Garis (0-1)</label>
-                                    <input type="number" name="opacity" id="style_opacity" class="form-control form-control-sm" value="1.0" step="0.1" min="0" max="1">
+                                    <label class="small">Opacity Garis</label>
+                                    <input type="number" name="opacity" id="style_opacity" class="form-control form-control-sm" value="1.0" step="0.1" max="1">
                                 </div>
                                 <div class="col-6">
-                                    <label class="small">Opacity Isi (0-1)</label>
-                                    <input type="number" name="fillOpacity" id="style_fillOpacity" class="form-control form-control-sm" value="0.2" step="0.1" min="0" max="1">
+                                    <label class="small">Opacity Isi</label>
+                                    <input type="number" name="fillOpacity" id="style_fillOpacity" class="form-control form-control-sm" value="0.2" step="0.1" max="1">
                                 </div>
                             </div>
                         </div>
 
-                        <div class="col-md-6 d-flex flex-column">
-                            <label class="mb-2 fw-bold">Real-time Preview</label>
-                            <div id="map_style_preview" style="flex-grow: 1; min-height: 300px; border: 2px solid #ddd; border-radius: 4px;"></div>
-                            <small class="text-muted mt-1 fst-italic">Geser/ubah nilai di kiri untuk melihat hasil.</small>
+                        <div class="col-md-4 d-flex flex-column">
+                            <label class="mb-2 fw-bold">Live Preview</label>
+                            <div id="map_style_preview" style="flex-grow: 1; min-height: 250px; border: 2px solid #eee; border-radius: 4px;"></div>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary">Simpan Grup</button>
+                    <button type="submit" class="btn btn-primary">Simpan Grup & Template</button>
                 </div>
             </form>
         </div>
@@ -350,29 +357,19 @@
 </div>
 
 <script>
-// Variabel Global
+// --- GLOBAL VARS ---
+const DEFAULT_COORD = [-7.408019826354289, 111.4428818182571]; 
 let styleMap = null, styleLayer = null;
 let drawMap = null, drawLayer = null, markers = [];
 let currentGroupStyle = {}; 
-
-// Koordinat Default (Ngawi)
-const defaultLat = -7.408019826354289;
-const defaultLng = 111.4428818182571;
+let currentGroupTemplate = []; // Menyimpan template atribut grup yang dipilih
 
 document.addEventListener('DOMContentLoaded', function () {
-    // --- CLASS MANAGER PAGINATION & SEARCH (FIXED) ---
+    // Class TableManager tidak berubah (sama seperti sebelumnya)
     class TableManager {
         constructor(tableId, paginationId, searchId) {
             this.table = document.getElementById(tableId);
-            
-            // --- SAFETY CHECK (PENGAMAN) ---
-            // Jika tabel tidak ditemukan di HTML (misal tab Line/Point sedang "Coming Soon")
-            // Maka hentikan proses agar tidak error.
-            if (!this.table) {
-                return; 
-            }
-            // -------------------------------
-
+            if (!this.table) return;
             this.paginationNav = document.querySelector(`#${paginationId} ul`);
             this.searchInput = document.getElementById(searchId);
             this.rowsPerPage = 10;
@@ -381,7 +378,6 @@ document.addEventListener('DOMContentLoaded', function () {
             this.currentPage = 1;
             this.init();
         }
-
         init() {
             if(this.searchInput) {
                 this.searchInput.addEventListener('keyup', (e) => {
@@ -393,35 +389,25 @@ document.addEventListener('DOMContentLoaded', function () {
             }
             this.render();
         }
-
         render() {
-            // Cek lagi table ada atau tidak (double safety)
             if (!this.table) return;
-
             const totalPages = Math.ceil(this.filteredRows.length / this.rowsPerPage);
             if (this.currentPage > totalPages) this.currentPage = totalPages || 1;
-            
             this.rows.forEach(r => r.style.display = 'none');
-            
             const start = (this.currentPage - 1) * this.rowsPerPage;
             const end = start + this.rowsPerPage;
             this.filteredRows.slice(start, end).forEach(r => r.style.display = '');
-            
             this.updatePagination(totalPages);
         }
-
         updatePagination(totalPages) {
-            if (!this.paginationNav) return; // Safety check untuk navigasi
-
+            if (!this.paginationNav) return;
             this.paginationNav.innerHTML = '';
             if(this.filteredRows.length === 0) return;
-            
             const prev = document.createElement('li');
             prev.className = `page-item ${this.currentPage === 1 ? 'disabled' : ''}`;
             prev.innerHTML = `<a class="page-link" href="#">&laquo;</a>`;
             prev.onclick = (e) => { e.preventDefault(); if(this.currentPage > 1) { this.currentPage--; this.render(); } };
             this.paginationNav.appendChild(prev);
-            
             for(let i=1; i<=totalPages; i++) {
                 const li = document.createElement('li');
                 li.className = `page-item ${i === this.currentPage ? 'active' : ''}`;
@@ -429,7 +415,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 li.onclick = (e) => { e.preventDefault(); this.currentPage = i; this.render(); };
                 this.paginationNav.appendChild(li);
             }
-            
             const next = document.createElement('li');
             next.className = `page-item ${this.currentPage === totalPages ? 'disabled' : ''}`;
             next.innerHTML = `<a class="page-link" href="#">&raquo;</a>`;
@@ -438,39 +423,64 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // Inisialisasi tetap sama, tapi sekarang aman walau tabelnya tidak ada
     new TableManager('tablePolygon', 'pagPolygon', 'searchPolygon');
-    new TableManager('tableLine', 'pagLine', 'searchLine');
-    new TableManager('tablePoint', 'pagPoint', 'searchPoint');
+    
+    // Logic Pencarian Grup (Accordion)
+    const searchInput = document.getElementById('searchGroupInput');
+    if(searchInput) {
+        searchInput.addEventListener('keyup', function(e) {
+            const searchText = e.target.value.toLowerCase();
+            const groups = document.querySelectorAll('.grup-item');
+            let hasVisibleGroup = false;
+            groups.forEach(group => {
+                const groupName = group.querySelector('.grup-name').textContent.toLowerCase();
+                if(groupName.includes(searchText)) {
+                    group.style.display = ''; 
+                    hasVisibleGroup = true;
+                } else {
+                    group.style.display = 'none'; 
+                }
+            });
+            const noResult = document.getElementById('noGroupFound');
+            if(noResult) noResult.style.display = hasVisibleGroup ? 'none' : 'block';
+        });
+    }
 });
 
-// ==========================================
-// 1. LOGIC GRUP & STYLE PREVIEW
-// ==========================================
+// ===========================================
+// 1. LOGIC GRUP (STYLE & TEMPLATE ATRIBUT)
+// ===========================================
 function openGrupModal(data = null) {
     const modalEl = document.getElementById('modalGrup');
-    const form = modalEl.querySelector('form');
-    form.reset();
+    modalEl.querySelector('form').reset();
     document.getElementById('grup_id').value = '';
+    document.getElementById('template_container').innerHTML = ''; // Reset template
 
     // Default Style
-    let style = { 
-        color: '#3388ff', weight: 3, opacity: 1, 
-        fillColor: '#3388ff', fillOpacity: 0.2, dashArray: '' 
-    };
+    let style = { color: '#3388ff', weight: 3, opacity: 1, fillColor: '#3388ff', fillOpacity: 0.2, dashArray: '' };
 
     if (data) {
+        // Mode Edit Grup
         document.getElementById('grup_id').value = data.id_dg;
         document.getElementById('grup_nama').value = data.nama_grup;
-        
         style = {
             color: data.color, weight: data.weight, opacity: data.opacity,
-            fillColor: data.fillColor, fillOpacity: data.fillOpacity, 
-            dashArray: data.dashArray || ''
+            fillColor: data.fillColor, fillOpacity: data.fillOpacity, dashArray: data.dashArray || ''
         };
+
+        // Load Template Atribut yang sudah ada
+        try {
+            const templates = JSON.parse(data.atribut_default);
+            if(Array.isArray(templates)) {
+                templates.forEach(t => addTemplateRow(t.label));
+            }
+        } catch(e) {}
+    } else {
+        // Mode Tambah Baru: Berikan 1 baris kosong default
+        addTemplateRow();
     }
 
-    // Set Input Values
+    // Populate Style Inputs
     document.getElementById('style_color').value = style.color;
     document.getElementById('style_weight').value = style.weight;
     document.getElementById('style_opacity').value = style.opacity;
@@ -479,201 +489,171 @@ function openGrupModal(data = null) {
     document.getElementById('style_dashArray').value = style.dashArray;
 
     modalEl.removeAttribute('aria-hidden');
-    const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
-    bsModal.show();
+    bootstrap.Modal.getOrCreateInstance(modalEl).show();
 
-    // TRIGGER PETA SAAT MODAL MUNCUL
     modalEl.addEventListener('shown.bs.modal', function () {
-        setTimeout(() => {
-            initStyleMap(style);
-        }, 100);
+        setTimeout(() => { initStyleMap(style); }, 200);
     }, { once: true });
 }
 
-function initStyleMap(initialStyle) {
-    if (styleMap) { 
-        styleMap.off();
-        styleMap.remove(); 
-        styleMap = null;
-    }
+// Fungsi Menambah Baris Template di Modal Grup
+function addTemplateRow(value = '') {
+    const div = document.createElement('div');
+    div.className = 'input-group mb-2';
+    div.innerHTML = `
+        <span class="input-group-text bg-light"><i class="fas fa-tag"></i></span>
+        <input type="text" name="template_attr[]" class="form-control form-control-sm" placeholder="Nama Kolom (mis: Pemilik)" value="${value}" required>
+        <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.parentElement.remove()">&times;</button>
+    `;
+    document.getElementById('template_container').appendChild(div);
+}
 
-    // Init Map Baru (Titik Ngawi)
-    styleMap = L.map('map_style_preview', { 
-        attributionControl: false,
-        zoomControl: false,
-        dragging: false,
-        scrollWheelZoom: false,
-        doubleClickZoom: false
-    }).setView([defaultLat, defaultLng], 13);
-    
+function initStyleMap(style) {
+    if (styleMap) { styleMap.remove(); styleMap = null; }
+    styleMap = L.map('map_style_preview', {
+        zoomControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false
+    }).setView(DEFAULT_COORD, 13);
     L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}').addTo(styleMap);
 
-    // Buat Dummy Polygon (Segitiga Sederhana di Ngawi)
-    // Offset sedikit dari titik tengah agar terlihat bagus
-    const latlngs = [
-        [defaultLat + 0.01, defaultLng - 0.01], 
-        [defaultLat - 0.01, defaultLng + 0.01], 
-        [defaultLat - 0.01, defaultLng - 0.02]
-    ];
-    
-    styleLayer = L.polygon(latlngs, initialStyle).addTo(styleMap);
+    const lat = DEFAULT_COORD[0];
+    const lng = DEFAULT_COORD[1];
+    const latlngs = [[lat + 0.01, lng - 0.01], [lat - 0.01, lng + 0.01], [lat - 0.01, lng - 0.02]];
+
+    styleLayer = L.polygon(latlngs, style).addTo(styleMap);
     styleMap.fitBounds(styleLayer.getBounds(), { padding: [20, 20] });
 
-    styleMap.invalidateSize();
-
-    // Event Listener Real-time
-    const inputIds = ['style_color', 'style_weight', 'style_opacity', 'style_fillColor', 'style_fillOpacity', 'style_dashArray'];
-    
-    inputIds.forEach(id => {
+    // Listener Realtime
+    const ids = ['style_color', 'style_weight', 'style_opacity', 'style_fillColor', 'style_fillOpacity', 'style_dashArray'];
+    ids.forEach(id => {
         const el = document.getElementById(id);
         const newEl = el.cloneNode(true);
         el.parentNode.replaceChild(newEl, el);
-        
         newEl.addEventListener('input', updateStylePreview);
-        newEl.addEventListener('change', updateStylePreview); 
+        newEl.addEventListener('change', updateStylePreview);
     });
 }
 
 function updateStylePreview() {
     if (!styleLayer) return;
-
-    const newStyle = {
+    const s = {
         color: document.getElementById('style_color').value,
-        weight: parseInt(document.getElementById('style_weight').value) || 1,
-        opacity: parseFloat(document.getElementById('style_opacity').value) || 1,
+        weight: parseInt(document.getElementById('style_weight').value),
+        opacity: parseFloat(document.getElementById('style_opacity').value),
         fillColor: document.getElementById('style_fillColor').value,
-        fillOpacity: parseFloat(document.getElementById('style_fillOpacity').value) || 0.2,
+        fillOpacity: parseFloat(document.getElementById('style_fillOpacity').value),
         dashArray: document.getElementById('style_dashArray').value
     };
-
-    styleLayer.setStyle(newStyle);
+    styleLayer.setStyle(s);
 }
 
 function deleteGrup(id) {
-    if(confirm('Hapus Grup ini? Semua data poligon di dalamnya akan ikut terhapus!')) {
-        window.location.href = `<?= base_url('geospasial/deleteGrup') ?>/${id}`;
-    }
+    if(confirm('Hapus grup ini?')) window.location.href = `<?= base_url('geospasial/deleteGrup') ?>/${id}`;
 }
 
-// ==========================================
-// 2. LOGIC DATA POLIGON (DRAW & ATTRIB)
-// ==========================================
-
-function openAddPolygon(grupId, grupStyle) {
-    preparePolygonModal(grupId, grupStyle);
+// ===========================================
+// 2. LOGIC EDITOR POLIGON (AUTO TEMPLATE)
+// ===========================================
+function openAddPolygon(grupId, grupData) {
+    preparePolygonModal(grupId, grupData);
 }
 
-function openEditPolygon(data, grupStyle) {
-    preparePolygonModal(data.id_dg, grupStyle, data);
+function openEditPolygon(data, grupData) {
+    preparePolygonModal(data.id_dg, grupData, data);
 }
 
-function preparePolygonModal(grupId, grupStyle, data = null) {
+function preparePolygonModal(grupId, grupData, data = null) {
     const modalEl = document.getElementById('modalDataPolygon');
     document.getElementById('formPolygonData').reset();
-    document.getElementById('attribute_container').innerHTML = ''; 
+    document.getElementById('attribute_container').innerHTML = '';
     
     document.getElementById('poly_id_grup').value = grupId;
     
+    // Simpan data grup untuk styling peta & template
     currentGroupStyle = {
-        color: grupStyle.color, 
-        weight: grupStyle.weight, 
-        opacity: grupStyle.opacity, 
-        fillColor: grupStyle.fillColor, 
-        fillOpacity: grupStyle.fillOpacity,
-        dashArray: grupStyle.dashArray
+        color: grupData.color, weight: grupData.weight, opacity: grupData.opacity,
+        fillColor: grupData.fillColor, fillOpacity: grupData.fillOpacity, dashArray: grupData.dashArray
     };
 
     if (data) {
+        // --- MODE EDIT ---
         document.getElementById('poly_id').value = data.id;
         document.getElementById('poly_nama').value = data.nama_dg;
         document.getElementById('poly_geojson').value = data.data_geospasial;
-
+        
+        // Load atribut yang tersimpan di poligon (override template grup)
         try {
             const attrs = JSON.parse(data.atribut_tambahan);
-            if(Array.isArray(attrs)) {
-                attrs.forEach(a => addAttributeRow(a.label, a.value));
-            }
-        } catch(e) {}
+            if(Array.isArray(attrs)) attrs.forEach(a => addAttributeRow(a.label, a.value));
+        } catch(e){}
     } else {
+        // --- MODE TAMBAH BARU (Load Template dari Grup) ---
         document.getElementById('poly_id').value = '';
         document.getElementById('poly_geojson').value = '';
-        addAttributeRow(); 
+        
+        try {
+            // Ambil template dari data grup
+            const templates = JSON.parse(grupData.atribut_default);
+            if(Array.isArray(templates) && templates.length > 0) {
+                // Loop template dan buat input field kosong
+                templates.forEach(t => addAttributeRow(t.label, '')); 
+            } else {
+                // Jika tidak ada template, buat 1 baris kosong
+                addAttributeRow();
+            }
+        } catch(e) {
+            addAttributeRow();
+        }
     }
 
     modalEl.removeAttribute('aria-hidden');
-    const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
-    bsModal.show();
+    bootstrap.Modal.getOrCreateInstance(modalEl).show();
 
     modalEl.addEventListener('shown.bs.modal', function () {
-        setTimeout(() => {
-            initDrawMap(data ? data.data_geospasial : null);
-        }, 100);
+        setTimeout(() => { initDrawMap(data ? data.data_geospasial : null); }, 200);
     }, { once: true });
 }
 
-// Atribut Dinamis
+// Fungsi Menambah Baris Atribut di Modal Poligon (Label & Value)
 function addAttributeRow(label = '', value = '') {
-    const container = document.getElementById('attribute_container');
     const div = document.createElement('div');
     div.className = 'attr-row';
     div.innerHTML = `
-        <input type="text" name="attr_key[]" class="form-control form-control-sm" placeholder="Label (mis: Luas)" value="${label}" required>
-        <input type="text" name="attr_val[]" class="form-control form-control-sm" placeholder="Nilai" value="${value}">
+        <input type="text" name="attr_key[]" class="form-control form-control-sm" placeholder="Label" value="${label}" required>
+        <input type="text" name="attr_val[]" class="form-control form-control-sm" placeholder="Isi Data" value="${value}">
         <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.parentElement.remove()">&times;</button>
     `;
-    container.appendChild(div);
+    document.getElementById('attribute_container').appendChild(div);
 }
 
-// Logic Drawing
-function initDrawMap(initialGeoJSON = null) {
-    if (drawMap) { 
-        drawMap.off();
-        drawMap.remove(); 
-        drawMap = null;
-    }
-    
-    // Set View ke Ngawi
-    drawMap = L.map('map_draw_polygon').setView([defaultLat, defaultLng], 13);
+// --- LOGIC MAP DRAWING (SAMA SEPERTI SEBELUMNYA) ---
+function initDrawMap(geoJsonString = null) {
+    if (drawMap) { drawMap.remove(); drawMap = null; }
+    drawMap = L.map('map_draw_polygon').setView(DEFAULT_COORD, 14);
     L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}').addTo(drawMap);
-    
-    drawMap.invalidateSize();
-
     markers = [];
     drawLayer = null;
-
-    if (initialGeoJSON) {
-        loadGeoJSONToMap(initialGeoJSON);
-    }
-
-    drawMap.on('click', function(e) {
-        addMarker(e.latlng);
-    });
+    if (geoJsonString) loadGeoJSON(geoJsonString);
+    drawMap.on('click', function(e) { addMarker(e.latlng); });
 }
 
 function addMarker(latlng) {
-    const marker = L.marker(latlng, { draggable: true }).addTo(drawMap);
-    
-    marker.on('drag', updatePolygonFromMarkers);
-    marker.on('click', function() {
-        drawMap.removeLayer(marker);
-        markers = markers.filter(m => m !== marker);
-        updatePolygonFromMarkers();
+    const m = L.marker(latlng, { draggable: true }).addTo(drawMap);
+    m.on('drag', updatePolyFromMarkers);
+    m.on('click', function() {
+        drawMap.removeLayer(m);
+        markers = markers.filter(x => x !== m);
+        updatePolyFromMarkers();
     });
-
-    markers.push(marker);
-    updatePolygonFromMarkers();
+    markers.push(m);
+    updatePolyFromMarkers();
 }
 
-function updatePolygonFromMarkers() {
+function updatePolyFromMarkers() {
     const latlngs = markers.map(m => m.getLatLng());
-
     if (drawLayer) drawMap.removeLayer(drawLayer);
-
     if (latlngs.length >= 3) {
         drawLayer = L.polygon(latlngs, currentGroupStyle).addTo(drawMap);
-        
-        const geojson = drawLayer.toGeoJSON();
-        document.getElementById('poly_geojson').value = JSON.stringify(geojson);
+        document.getElementById('poly_geojson').value = JSON.stringify(drawLayer.toGeoJSON());
     } else {
         document.getElementById('poly_geojson').value = '';
     }
@@ -688,106 +668,34 @@ function clearMapDraw() {
 
 function handleFileUpload(input) {
     const file = input.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
+    if(!file) return;
+    const r = new FileReader();
+    r.onload = function(e) {
         try {
-            const geojson = JSON.parse(e.target.result);
+            const json = JSON.parse(e.target.result);
             clearMapDraw();
-            loadGeoJSONToMap(JSON.stringify(geojson));
-        } catch (err) {
-            alert('File GeoJSON tidak valid!');
-        }
+            loadGeoJSON(JSON.stringify(json));
+        } catch(err) { alert('GeoJSON Invalid'); }
     };
-    reader.readAsText(file);
+    r.readAsText(file);
     input.value = '';
 }
 
-function loadGeoJSONToMap(jsonString) {
-    try {
-        const geojson = JSON.parse(jsonString);
-        const layer = L.geoJSON(geojson);
-        const layers = layer.getLayers();
-        
-        if (layers.length > 0) {
-            const poly = layers[0];
-            if (poly instanceof L.Polygon) {
-                let latlngs = poly.getLatLngs();
-                if(Array.isArray(latlngs[0])) latlngs = latlngs[0]; 
-
-                latlngs.forEach(ll => {
-                    addMarker(ll);
-                });
-                drawMap.fitBounds(poly.getBounds());
-            } else {
-                alert('GeoJSON bukan Polygon!');
-            }
-        }
-    } catch(e) {
-        console.error("Error loading GeoJSON", e);
+function loadGeoJSON(jsonString) {
+    const json = JSON.parse(jsonString);
+    const layer = L.geoJSON(json);
+    const layers = layer.getLayers();
+    if(layers.length > 0 && layers[0] instanceof L.Polygon) {
+        let latlngs = layers[0].getLatLngs();
+        if(Array.isArray(latlngs[0])) latlngs = latlngs[0];
+        latlngs.forEach(ll => addMarker(ll));
+        drawMap.fitBounds(layers[0].getBounds());
+    } else {
+        alert('Data bukan poligon.');
     }
 }
 
 function deleteData(type, id) {
-    if(confirm('Hapus data ini?')) {
-        window.location.href = `<?= base_url('geospasial/delete') ?>/${type}/${id}`;
-    }
-}
-
-// Fungsi Modal Standar (Line & Point)
-function openAddModal(type) {
-    if(type === 'polygon') return; 
-    const modalId = 'modal' + type;
-    const modalEl = document.getElementById(modalId);
-    if(modalEl) {
-        modalEl.querySelector('form').reset();
-        modalEl.querySelector('[name="id"]').value = ''; 
-        modalEl.removeAttribute('aria-hidden');
-        bootstrap.Modal.getOrCreateInstance(modalEl).show();
-    }
-}
-
-function openEditModal(type, data) {
-    if(type === 'polygon') return; 
-    const modalId = 'modal' + type;
-    const modalEl = document.getElementById(modalId);
-    if(modalEl) {
-        document.getElementById('id_' + type).value = data.id;
-        document.getElementById('nama_' + type).value = data.nama_dg;
-        document.getElementById('grup_' + type).value = data.id_dg;
-        document.getElementById('geo_' + type).value = data.data_geospasial;
-        modalEl.removeAttribute('aria-hidden');
-        bootstrap.Modal.getOrCreateInstance(modalEl).show();
-    }
-}
-
-// --- LOGIKA PENCARIAN GRUP (REAL-TIME) ---
-const searchInput = document.getElementById('searchGroupInput');
-
-if(searchInput) {
-    searchInput.addEventListener('keyup', function(e) {
-        const searchText = e.target.value.toLowerCase();
-        const groups = document.querySelectorAll('.grup-item');
-        let hasVisibleGroup = false;
-
-        groups.forEach(group => {
-            // Ambil nama grup dari elemen dengan class 'grup-name'
-            const groupName = group.querySelector('.grup-name').textContent.toLowerCase();
-            
-            if(groupName.includes(searchText)) {
-                group.style.display = ''; // Tampilkan
-                hasVisibleGroup = true;
-            } else {
-                group.style.display = 'none'; // Sembunyikan
-            }
-        });
-
-        // Tampilkan pesan jika tidak ada hasil
-        const noResult = document.getElementById('noGroupFound');
-        if(noResult) {
-            noResult.style.display = hasVisibleGroup ? 'none' : 'block';
-        }
-    });
+    if(confirm('Hapus data ini?')) window.location.href = `<?= base_url('geospasial/delete') ?>/${type}/${id}`;
 }
 </script>

@@ -11,7 +11,7 @@ class GeospasialGrupModel extends Model
     protected $useAutoIncrement = true;
     protected $allowedFields    = [
         'nama_grup', 'jenis_peta', 'color', 'weight', 'opacity', 
-        'dashArray', 'fillColor', 'fillOpacity', 'radius'
+        'dashArray', 'fillColor', 'fillOpacity', 'radius', 'atribut_default'
     ];
     protected $useTimestamps    = true;
 }

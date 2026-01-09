@@ -54,19 +54,32 @@ public function saveGrup()
     {
         $id = $this->request->getPost('id_dg');
         
-        // Menangkap input dashArray
+        // Handle dashArray
         $dashArray = $this->request->getPost('dashArray');
-        if($dashArray == '') $dashArray = null; // Ubah string kosong jadi null agar garis solid
+        if($dashArray == '') $dashArray = null;
+
+        // --- BARU: Handle Template Atribut ---
+        $attrLabels = $this->request->getPost('template_attr'); // Array nama kolom
+        $templateJson = [];
+        if (!empty($attrLabels)) {
+            foreach ($attrLabels as $label) {
+                if (!empty($label)) {
+                    $templateJson[] = ['label' => $label]; // Simpan label saja
+                }
+            }
+        }
+        // -------------------------------------
 
         $data = [
-            'nama_grup'   => $this->request->getPost('nama_grup'),
-            'jenis_peta'  => $this->request->getPost('jenis_peta'),
-            'color'       => $this->request->getPost('color'),
-            'weight'      => $this->request->getPost('weight'),
-            'opacity'     => $this->request->getPost('opacity'),
-            'dashArray'   => $dashArray, // <--- TAMBAHAN INI
-            'fillColor'   => $this->request->getPost('fillColor'),
-            'fillOpacity' => $this->request->getPost('fillOpacity'),
+            'nama_grup'       => $this->request->getPost('nama_grup'),
+            'jenis_peta'      => $this->request->getPost('jenis_peta'),
+            'color'           => $this->request->getPost('color'),
+            'weight'          => $this->request->getPost('weight'),
+            'opacity'         => $this->request->getPost('opacity'),
+            'dashArray'       => $dashArray,
+            'fillColor'       => $this->request->getPost('fillColor'),
+            'fillOpacity'     => $this->request->getPost('fillOpacity'),
+            'atribut_default' => json_encode($templateJson) // Simpan JSON
         ];
 
         if ($id) {
@@ -75,7 +88,7 @@ public function saveGrup()
             $this->grupModel->save($data);
         }
 
-        return redirect()->to('geospasial')->with('success', 'Grup & Style berhasil disimpan');
+        return redirect()->to('geospasial')->with('success', 'Grup & Template Atribut berhasil disimpan');
     }
 
     public function deleteGrup($id)

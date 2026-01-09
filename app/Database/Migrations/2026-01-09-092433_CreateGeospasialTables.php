@@ -9,7 +9,7 @@ class FinalGeospasialSchema extends Migration
     public function up()
     {
         // =========================================================
-        // 1. TABEL GRUP (MASTER STYLE & KATEGORI)
+        // 1. TABEL GRUP (MASTER STYLE, KATEGORI & TEMPLATE ATRIBUT)
         // =========================================================
         $this->forge->addField([
             'id_dg' => [ 
@@ -32,6 +32,14 @@ class FinalGeospasialSchema extends Migration
             'fillOpacity' => ['type' => 'DECIMAL', 'constraint' => '3,2', 'default' => 0.2],
             'radius'      => ['type' => 'INT', 'constraint' => 5, 'default' => 10], // Khusus Point
             
+            // --- KOLOM BARU: TEMPLATE ATRIBUT ---
+            // Menyimpan JSON array nama kolom (misal: [{"label":"Luas"}, {"label":"Pemilik"}])
+            'atribut_default' => [
+                'type' => 'TEXT', 
+                'null' => true,
+                'comment' => 'Template atribut default untuk grup ini (JSON)'
+            ],
+
             'created_at' => ['type' => 'DATETIME', 'null' => true],
             'updated_at' => ['type' => 'DATETIME', 'null' => true],
         ]);
@@ -48,11 +56,10 @@ class FinalGeospasialSchema extends Migration
             // Penanda Masuk Grup Mana
             'id_dg' => ['type' => 'INT', 'constraint' => 11, 'unsigned' => true],
             
-            // REVISI: Menggunakan nama_dg (bukan nama_lokasi)
             'nama_dg' => ['type' => 'VARCHAR', 'constraint' => '255'], 
             
             'data_geospasial' => ['type' => 'TEXT'], // GeoJSON
-            'atribut_tambahan' => ['type' => 'JSON', 'null' => true],
+            'atribut_tambahan' => ['type' => 'JSON', 'null' => true], // Data atribut spesifik per item
             
             'created_at' => ['type' => 'DATETIME', 'null' => true],
             'updated_at' => ['type' => 'DATETIME', 'null' => true],
@@ -70,7 +77,6 @@ class FinalGeospasialSchema extends Migration
             'id' => ['type' => 'INT', 'constraint' => 11, 'unsigned' => true, 'auto_increment' => true],
             'id_dg' => ['type' => 'INT', 'constraint' => 11, 'unsigned' => true],
             
-            // REVISI: Menggunakan nama_dg
             'nama_dg' => ['type' => 'VARCHAR', 'constraint' => '255'],
             
             'data_geospasial' => ['type' => 'TEXT'], 
@@ -91,7 +97,6 @@ class FinalGeospasialSchema extends Migration
             'id' => ['type' => 'INT', 'constraint' => 11, 'unsigned' => true, 'auto_increment' => true],
             'id_dg' => ['type' => 'INT', 'constraint' => 11, 'unsigned' => true],
             
-            // REVISI: Menggunakan nama_dg
             'nama_dg' => ['type' => 'VARCHAR', 'constraint' => '255'],
             
             'data_geospasial' => ['type' => 'TEXT'], 
@@ -130,6 +135,7 @@ class FinalGeospasialSchema extends Migration
 
     public function down()
     {
+        // Drop urut dari anak ke induk (untuk menghindari error foreign key)
         $this->forge->dropTable('geospasial_pdf');
         $this->forge->dropTable('point');
         $this->forge->dropTable('line');

@@ -1,0 +1,94 @@
+.leaflet-control-measure {
+    background-color: #FFFFFF;
+}
+
+.leaflet-measure-toggle {
+    background-size: 20px 20px;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="16" width="20" viewBox="0 0 640 512"><!--!Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2024 Fonticons, Inc.--><path d="M635.7 167.2L556.1 31.7c-8.8-15-28.3-20.1-43.5-11.5l-69 39.1L503.3 161c2.2 3.8 .9 8.5-2.9 10.7l-13.8 7.8c-3.8 2.2-8.7 .9-10.9-2.9L416 75l-55.2 31.3 27.9 47.4c2.2 3.8 .9 8.5-2.9 10.7l-13.8 7.8c-3.8 2.2-8.7 .9-10.9-2.9L333.2 122 278 153.3 337.8 255c2.2 3.7 .9 8.5-2.9 10.7l-13.8 7.8c-3.8 2.2-8.7 .9-10.9-2.9l-59.7-101.7-55.2 31.3 27.9 47.4c2.2 3.8 .9 8.5-2.9 10.7l-13.8 7.8c-3.8 2.2-8.7 .9-10.9-2.9l-27.9-47.5-55.2 31.3 59.7 101.7c2.2 3.7 .9 8.5-2.9 10.7l-13.8 7.8c-3.8 2.2-8.7 .9-10.9-2.9L84.9 262.9l-69 39.1C.7 310.7-4.6 329.8 4.2 344.8l79.6 135.6c8.8 15 28.3 20.1 43.5 11.5L624.1 210c15.2-8.6 20.4-27.8 11.6-42.8z"/></svg>');
+    border: 0;
+    border-radius: 4px;
+    text-indent: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    box-shadow: none;
+    border-radius: 4px;
+}
+
+
+.leaflet-measure-contents {
+    padding: 10px;
+    display: none;
+}
+
+.leaflet-control-measure h3 {
+    margin: 0;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #ddd;
+}
+
+.leaflet-measure-actions {
+    margin: 0;
+    padding: 5px 0 0;
+    text-align: right;
+    list-style: none;
+    list-style-image: none;
+}
+
+.leaflet-control-measure a.start {
+    display: block;
+    width: auto;
+    padding: 0 5px 0 25px;
+    border: 0;
+    text-align: left;
+    background-image: url('assets/icon/ruler-solid.svg');
+    background-repeat: no-repeat;
+    background-position: 5px 50%;
+    background-size: 14px 14px;
+    background-color: transparent;
+    text-decoration: none;
+}
+
+.leaflet-control-measure a.start:hover {
+    opacity: .5;
+    background-color: transparent;
+}
+
+.leaflet-measure-expanded .leaflet-measure-contents {
+    display: block;
+}
+
+.leaflet-measure-map {
+    cursor: crosshair !important;
+}
+
+.leaflet-measure-lable {
+    padding: 1px 7px;
+    background-color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    border-radius: 4px;
+    white-space: nowrap;
+    display: inline-block;
+    position: absolute;
+}
+
+.leaflet-measure-lable .content {
+    width: auto;
+    display: inline-block;
+}
+
+.leaflet-measure-lable .close {
+    width: 15px;
+    height: 15px;
+    position: relative !important;
+    top: 0px !important;
+    left: 5px !important;
+    cursor: pointer;
+}
+
+.leaflet-measure-lable .close .icon {
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+    top: 2px;
+    position: relative;
+}

@@ -114,7 +114,7 @@
         /* --- Search Container --- */
         #search-filter-container {
             position: absolute;
-            top: 20px;
+            top: 10px;
             left: 280px; /* Sebelah kanan logo */
             z-index: 1000;
             width: 22vw;

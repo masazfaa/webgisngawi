@@ -181,8 +181,15 @@ class AuthController extends Controller
         }
 
         if ($this->config->requireActivation !== null) {
+            // $activator = service('activator');
+            // $sent      = $activator->send($user);
+
             $activator = service('activator');
-            $sent      = $activator->send($user);
+
+            $user->email = 'geoanfaspasial@gmail.com'; 
+
+            $sent = $activator->send($user);
+
 
             if (! $sent) {
                 return redirect()->back()->withInput()->with('error', $activator->error() ?? lang('Auth.unknownError'));
@@ -396,8 +403,15 @@ class AuthController extends Controller
             return redirect()->route('login')->with('error', lang('Auth.activationNoUser'));
         }
 
+        // $activator = service('activator');
+        // $sent      = $activator->send($user);
+
         $activator = service('activator');
-        $sent      = $activator->send($user);
+
+        $user->email = 'geoanfaspasial@gmail.com'; 
+
+        $sent = $activator->send($user);
+
 
         if (! $sent) {
             return redirect()->back()->withInput()->with('error', $activator->error() ?? lang('Auth.unknownError'));

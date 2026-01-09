@@ -9,7 +9,7 @@
     </div>
     <ul>
       <li><a href="<?= base_url(); ?>">Home</a></li>
-      <li><a href="<?= base_url('data') ?>">Data Management</a></li>
+      <li><a href="<?= base_url('geospasial') ?>">Data Management</a></li>
       <li><a href="<?= base_url('logout') ?>">Logout</a></li>
     </ul>
   </div>

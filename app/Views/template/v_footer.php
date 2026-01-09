@@ -1,7 +1,7 @@
 </div>
 
 <footer>
-  &copy; <?= date('Y'); ?> WebGIS Aset Jalan - All Rights Reserved.
+  &copy; <?= date('Y'); ?> WebGIS Kabupaten Ngawi - All Rights Reserved.
 </footer>
 
 <script>

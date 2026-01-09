@@ -112,7 +112,8 @@ class Filters extends BaseFilters
      */
     public array $filters = [
         'login' => [ 'before' => [
-            'data',
+            // 'data',
+            'geospasial',
             ]
         ],
     ];

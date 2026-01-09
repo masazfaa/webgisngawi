@@ -3,181 +3,124 @@
 
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <link rel="shortcut icon" href="<?= base_url() ?>favicon.ico" type="image/x-icon">
     <title>WebGIS Kabupaten Ngawi - <?= $title ?></title>
 
-    <link rel="stylesheet" href="<?= base_url() ?>leaflet/1.3.0/leaflet.css" />
-    <link rel="stylesheet" href="<?= base_url() ?>leaflet/leafletsearchmaster/src/leaflet-search.css" />
-    <link rel="stylesheet" href="<?= base_url() ?>leaflet/locateme/dist/L.Control.Locate.min.css" />
-    <link rel="stylesheet" href="<?= base_url() ?>leaflet/leaflet-panel-layers-master/src/leaflet-panel-layerss.css" />
-    <link rel="stylesheet" href="<?= base_url() ?>leaflet/leaflet-panel-layers-master/examples/icons.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-    <link rel="stylesheet" href="<?= base_url() ?>leaflet/leaflet-bmswitcher-main/src/leaflet-bmswitcher.css" />
-    <link rel="stylesheet" href="<?= base_url() ?>leaflet/leaflet-betterscale-master/L.Control.BetterScale.css" />
-    <link rel="stylesheet" href="<?= base_url() ?>leaflet/leaflet-measure.css" />
-
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <script src="<?= base_url() ?>leaflet/1.3.0/leaflet.js"></script>
-    <script src="<?= base_url() ?>leaflet/leafletsearchmaster/src/leaflet-search.js"></script>
-    <script src="<?= base_url() ?>leaflet/locateme/dist/L.Control.Locate.min.js"></script>
-    <script src="<?= base_url() ?>leaflet/rbush.min.js"></script>
-    <script src="<?= base_url() ?>leaflet/labelgun.min.js"></script>
-    <script src="<?= base_url() ?>leaflet/labels.js"></script>
-    <script src="<?= base_url() ?>leaflet/leaflet-panel-layers-master/src/leaflet-panel-layers.js"></script>
-    <script src="<?= base_url() ?>leaflet/leaflet-bmswitcher-main/src/leaflet-bmswitcher.js"></script>
-    <script src="<?= base_url() ?>leaflet/leaflet-betterscale-master/L.Control.BetterScale.js"></script>
-    <script src="<?= base_url() ?>leaflet/leaflet-measure.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-search@2.9.8/dist/leaflet-search.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.locatecontrol@0.79.0/dist/L.Control.Locate.min.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-panel-layers@1.3.0/dist/leaflet-panel-layers.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-search@2.9.8/dist/leaflet-search.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet.locatecontrol@0.79.0/dist/L.Control.Locate.min.js"></script>
+    <script src="https://unpkg.com/leaflet-panel-layers@1.3.0/dist/leaflet-panel-layers.min.js"></script>
 
     <style>
-        html, body {
-            height: 100%;
-            margin: 0;
-            font-family: Arial, sans-serif !important;
-            overflow: hidden;
+        :root {
+            --primary-color: #007bff;
+            --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.1);
+            --bg-glass: rgba(255, 255, 255, 0.95);
         }
 
-        #map {
-            width: 100%;
-            height: 100vh;
-            position: absolute;
-            top: 0;
-            left: 0;
-            z-index: 1;
-        }
-
-        /* --- Logo Container --- */
-        #logo-container {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background-color: white;
-            border-radius: 10px;
-            width: 260px;
-            height: 60px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
-
-        #inner-container {
-            background-color: white;
-            border: 2px solid gray;
-            border-radius: 10px;
-            width: 90%;
-            height: 80%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 0 10px;
-        }
-
-        #arrow {
-            cursor: pointer;
-            margin-left: 10px;
-            user-select: none;
-        }
-
-        /* --- Popup Menu --- */
-        #popup-logo-container {
-            position: absolute;
-            top: 80px;
-            left: 50px;
-            background-color: white;
-            border-radius: 8px;
-            padding: 10px 20px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
-            z-index: 1001;
-            display: none; /* Hidden by default */
-        }
-
-        #popup-logo-container ul {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        #popup-logo-container ul li a {
-            color: #333;
-            text-decoration: none;
-            font-weight: 500;
-            display: block;
-        }
-
-        #popup-logo-container ul li:hover {
-            background-color: #f0f0f0;
-            border-radius: 4px;
-        }
-
-        /* --- Search Container --- */
-        #search-filter-container {
-            position: absolute;
-            top: 10px;
-            left: 280px; /* Sebelah kanan logo */
-            z-index: 1000;
-            width: 22vw;
-        }
-
-        #search-container input {
-            width: 100%;
-            padding: 10px;
-            font-size: 1rem;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
-
-        /* --- Coordinate Box --- */
-        #coordinate-container {
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            background-color: white;
-            border-radius: 5px;
-            padding: 5px;
-            z-index: 1000;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-        }
-
-        #coordinate-container a {
-            padding: 0 10px;
-            font-size: 0.8em;
-            color: #333;
-            text-decoration: none;
-        }
-
-        /* --- Custom Controls --- */
-        .leaflet-top.leaflet-left {
-            top: 70px; /* Geser control leaflet ke bawah agar tidak tertutup */
-        }
-        .leaflet-control-custom {
-            background-color: white;
-            width: 34px;
-            height: 34px;
-            margin-bottom: 10px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            box-shadow: 0 1px 5px rgba(0,0,0,0.4);
-            border-radius: 2px;
-        }
-
-        .leaflet-control-custom:hover {
-            background-color: #f4f4f4;
-        }
-
-        /* --- Panel Layers Override --- */
-        .leaflet-panel-layers.expanded {
-            display: none; /* Dikontrol oleh tombol custom */
-            top: 50px;
-        }
+        body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; overflow: hidden; }
         
-        .leaflet-panel-layers-list {
-            max-height: 50vh;
-            overflow-y: auto;
+        #map { width: 100%; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
+
+        /* HEADER LOGO */
+        #header-box {
+            position: absolute; top: 15px; left: 15px; z-index: 1000;
+            background: var(--bg-glass); backdrop-filter: blur(5px);
+            padding: 12px 20px; border-radius: 12px;
+            box-shadow: var(--shadow-soft);
+            display: flex; align-items: center; gap: 12px;
+            cursor: pointer; transition: transform 0.2s;
+        }
+        #header-box:hover { transform: translateY(-2px); }
+        .logo-icon { color: var(--primary-color); font-size: 1.5rem; }
+        .app-title { font-weight: 700; font-size: 1.1rem; color: #333; line-height: 1.2; }
+        .app-subtitle { font-size: 0.75rem; color: #666; font-weight: 500; display: block; }
+        .dropdown-arrow { font-size: 0.8rem; color: #999; margin-left: 5px; transition: transform 0.3s; }
+        .dropdown-arrow.open { transform: rotate(180deg); }
+
+        /* DROPDOWN MENU */
+        #menu-dropdown {
+            position: absolute; top: 80px; left: 15px; z-index: 1001;
+            background: white; border-radius: 10px; padding: 8px 0;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            min-width: 220px; display: none; transform-origin: top left;
+            animation: fadeIn 0.2s ease-out;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        
+        .menu-item {
+            display: flex; align-items: center; padding: 12px 20px;
+            text-decoration: none; color: #444; font-size: 0.95rem;
+            transition: background 0.2s;
+        }
+        .menu-item:hover { background: #f8f9fa; color: var(--primary-color); }
+        .menu-item i { width: 24px; text-align: center; margin-right: 10px; }
+
+        /* SEARCH BAR */
+        #search-wrapper {
+            position: absolute; top: 15px; left: 300px; z-index: 1000;
+            width: 320px; transition: all 0.3s;
+        }
+        .search-input {
+            width: 100%; padding: 12px 20px; padding-left: 45px;
+            border: none; border-radius: 50px;
+            background: var(--bg-glass); backdrop-filter: blur(5px);
+            font-size: 0.95rem; box-shadow: var(--shadow-soft);
+            outline: none; transition: box-shadow 0.2s;
+        }
+        .search-input:focus { box-shadow: 0 6px 16px rgba(0,0,0,0.15); }
+        .search-icon {
+            position: absolute; left: 15px; top: 50%; transform: translateY(-50%);
+            color: #999; font-size: 1rem; pointer-events: none;
+        }
+
+        /* COORDINATE BOX */
+        #coord-box {
+            position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
+            z-index: 1000; background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(4px); padding: 6px 16px;
+            border-radius: 20px; font-size: 0.85rem; font-weight: 500; color: #555;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1); pointer-events: none;
+            display: flex; gap: 15px;
+        }
+
+        /* LEAFLET CUSTOMIZATION */
+        .leaflet-control-container .leaflet-top { top: 80px; } /* Geser control ke bawah */
+        .leaflet-bar { border: none !important; box-shadow: var(--shadow-soft) !important; border-radius: 8px !important; overflow: hidden; }
+        .leaflet-bar a { width: 36px !important; height: 36px !important; line-height: 36px !important; background: white; color: #444; border-bottom: 1px solid #f0f0f0; transition: 0.2s; }
+        .leaflet-bar a:hover { background: #f8f9fa; color: var(--primary-color); }
+        .leaflet-bar a:last-child { border-bottom: none; }
+        
+        /* PANEL LAYERS */
+        .leaflet-panel-layers { 
+            background: white !important; border-radius: 12px !important; 
+            box-shadow: var(--shadow-soft) !important; padding: 5px !important; 
+        }
+        .leaflet-panel-layers-item { padding: 8px 10px; border-radius: 6px; transition: 0.2s; }
+        .leaflet-panel-layers-item:hover { background-color: #f8f9fa; }
+
+        /* CUSTOM BUTTON */
+        .custom-btn {
+            background: white; width: 36px; height: 36px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; box-shadow: var(--shadow-soft); margin-bottom: 10px;
+            color: #555; transition: 0.2s;
+        }
+        .custom-btn:hover { color: var(--primary-color); background: #fff; }
+
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            #search-wrapper { left: 15px; top: 90px; width: calc(100% - 30px); }
+            .leaflet-control-container .leaflet-top.leaflet-left { top: 150px; }
+            #header-box { width: auto; max-width: 80%; }
+            #coord-box { bottom: 30px; font-size: 0.75rem; width: 90%; justify-content: center; }
         }
     </style>
 </head>
@@ -186,143 +129,245 @@
 
     <div id="map"></div>
 
-    <div id="logo-container">
-        <div id="inner-container">
-            <span style="font-weight: bold; font-size: 1.1rem;">DEMO WEBGIS KABUPATEN NGAWI</span>
-            <div id="arrow">▼</div>
+    <div id="header-box" onclick="toggleMenu()">
+        <i class="fa-solid fa-map-location-dot logo-icon"></i>
+        <div>
+            <div class="app-title">WEBGIS NGAWI</div>
+            <span class="app-subtitle">Sistem Informasi Geografis</span>
         </div>
+        <i id="menu-arrow" class="fa-solid fa-chevron-down dropdown-arrow"></i>
     </div>
 
-    <div id="popup-logo-container">
-        <ul>
-            <li><a href="<?= base_url('geospasial') ?>">Login Admin</a></li>
-        </ul>
+    <div id="menu-dropdown">
+        <div style="padding: 10px 20px; font-size: 0.8rem; font-weight: 600; color: #aaa; letter-spacing: 0.5px;">MENU UTAMA</div>
+        <a href="<?= base_url('geospasial') ?>" class="menu-item">
+            <i class="fa-solid fa-user-shield"></i> Login Administrator
+        </a>
     </div>
 
-    <div id="search-filter-container">
-        <div id="search-container">
-            <input type="text" id="search-laporan" placeholder="Cari laporan..." />
-        </div>
+    <div id="search-wrapper">
+        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+        <input type="text" id="search-input" class="search-input" placeholder="Cari lokasi atau data poligon...">
     </div>
 
-    <div id="coordinate-container">
-        <a id="lat">Lat: -</a>
-        <a id="lng">Long: -</a>
+    <div id="coord-box">
+        <span><i class="fa-solid fa-location-crosshairs text-primary"></i> <span id="lat-val">-</span></span>
+        <span><i class="fa-solid fa-globe text-success"></i> <span id="lng-val">-</span></span>
     </div>
 
     <script>
-        // 1. Inisialisasi Map
-        var map = L.map('map', {
-            zoom: 14,
-            maxZoom: 22,
-            center: L.latLng([-7.408019826354289, 111.4428818182571]),
-            zoomControl: true 
-        });
-
-        // 2. Locate Control (Lokasi Saya)
-        map.addControl(L.control.locate({
-            locateOptions: {
-                flyTo: true,
-                minzoom: 15,
-                initialZoomLevel: 17,
-            }
-        }));
-
-        // 3. Measure Control (Pengukuran)
-        L.control.measure({
-            position: 'topleft',
-            primaryLengthUnit: 'meters',
-            primaryAreaUnit: 'sqmeters',
+        // --- 1. INISIALISASI MAP ---
+        var map = L.map('map', { zoomControl: false, attributionControl: false }).setView([-7.408019826354289, 111.4428818182571], 12);
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+        
+        // --- 2. CONTROLS ---
+        // Locate Control
+        L.control.locate({ 
+            position: 'topleft', 
+            strings: { title: "Lokasi Saya" },
+            flyTo: true,
+            icon: 'fa-solid fa-crosshairs',
+            iconLoading: 'fa-solid fa-spinner fa-spin'
         }).addTo(map);
 
-        // 4. Scale Control
-        L.control.scale({ position: 'bottomright', metric: true }).addTo(map);
-
-        // 5. Update Koordinat saat mouse bergerak
-        map.on('mousemove', function(e) {
-            document.getElementById('lat').textContent = 'Lat: ' + e.latlng.lat.toFixed(5);
-            document.getElementById('lng').textContent = 'Long: ' + e.latlng.lng.toFixed(5);
-        });
-
-        // 6. Base Map Switcher
-        const bmList = [
-            {
-                layer: L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "&copy; OpenStreetMap contributors", crossOrigin: true }),
-                name: "Open Street Map",
-                icon: "<?= base_url() ?>leaflet/leaflet-bmswitcher-main/example/assets/osm.png"
-            },
-            {
-                layer: L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}.png", { attribution: "&copy; OpenStreetMap contributors", crossOrigin: true }),
-                name: "ArcGIS Online",
-                icon: "<?= base_url() ?>leaflet/leaflet-bmswitcher-main/example/assets/arcgis-online.png"
-            },
-            {
-                layer: L.tileLayer("https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}", { maxZoom: 22, subdomains: ['mt0', 'mt1', 'mt2', 'mt3'] }).addTo(map),
-                name: "Google Satellite",
-                icon: "<?= base_url() ?>leaflet/leaflet-bmswitcher-main/example/assets/google.png"
-            },
-        ];
-        new L.bmSwitcher(bmList).addTo(map);
-
-        // 7. Tombol Reset Lokasi (Custom Control)
-        var ReturnCenterControl = L.Control.extend({
+        // Reset View Control (Custom)
+        var ResetControl = L.Control.extend({
             options: { position: 'topleft' },
             onAdd: function(map) {
-                var container = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-custom');
-                // Menggunakan icon SVG
-                container.innerHTML = '<img src="<?= base_url() ?>pin-location-svgrepo-com.svg" width="20" height="20">';
-                container.onclick = function() {
-                    map.setView([-7.408019826354289, 111.4428818182571], 14);
-                };
-                return container;
-            },
+                var btn = L.DomUtil.create('div', 'custom-btn');
+                btn.innerHTML = '<i class="fa-solid fa-house"></i>';
+                btn.title = "Reset Tampilan";
+                btn.onclick = function(){ map.setView([-7.408019826354289, 111.4428818182571], 12); }
+                return btn;
+            }
         });
-        map.addControl(new ReturnCenterControl());
+        map.addControl(new ResetControl());
 
-        // 8. Panel Layers
-        var baseLayers = []; // Kosong karena sudah pakai BM Switcher
-        var overLayers = []; // Isi layer overlay disini jika ada
+        // Coordinate Update
+        map.on('mousemove', function(e) {
+            document.getElementById('lat-val').innerText = e.latlng.lat.toFixed(5);
+            document.getElementById('lng-val').innerText = e.latlng.lng.toFixed(5);
+        });
 
+        // --- 3. BASEMAPS ---
+        var baseLayers = [
+            {
+                name: "Open Street Map",
+                layer: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'),
+                icon: '<i class="fa-solid fa-map text-success"></i>'
+            },
+            {
+                name: "Google Satellite",
+                layer: L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {maxZoom: 22}),
+                icon: '<i class="fa-solid fa-satellite text-primary"></i>'
+            },
+            {
+                name: "Google Terrain",
+                layer: L.tileLayer('https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}', {maxZoom: 22}),
+                icon: '<i class="fa-solid fa-mountain text-secondary"></i>'
+            }
+        ];
+        map.addLayer(baseLayers[0].layer); // Default
+
+        // --- 4. OVERLAY LAYERS (DATA POLIGON) ---
+        var overLayers = [];
+        var searchGroup = new L.LayerGroup().addTo(map);
+
+<?php if(!empty($layers)): ?>
+            <?php foreach($layers as $grup): ?>
+                
+                // Cek apakah ada datanya (Features tidak kosong)
+                <?php if(!empty($grup['final_geojson']['features'])): ?>
+                    
+                    // --- A. SIAPKAN DATA & STYLE ---
+                    var dataGrup_<?= $grup['id_dg'] ?> = <?= json_encode($grup['final_geojson']) ?>;
+                    
+                    var style_<?= $grup['id_dg'] ?> = {
+                        color: "<?= $grup['color'] ?>",
+                        weight: <?= $grup['weight'] ?>,
+                        opacity: 1,
+                        fillColor: "<?= $grup['fillColor'] ?>",
+                        fillOpacity: <?= $grup['fillOpacity'] ?>,
+                        dashArray: "<?= $grup['dashArray'] ?? '' ?>"
+                    };
+
+                    // --- B. LOGIKA VISUAL LEGENDA (CSS) SESUAI JENIS PETA ---
+                    <?php
+                        $jenis = $grup['jenis_peta'];
+                        $panelGroupName = "Layer Lainnya";
+                        $cssIcon = "";
+
+                        // 1. JIKA POLIGON (Kotak)
+                        if ($jenis == 'Polygon') {
+                            $panelGroupName = " 🗺️ Data Area (Poligon)";
+                            
+                            // Logika Border Dashed/Dotted
+                            $borderStyle = 'solid';
+                            if (!empty($grup['dashArray'])) {
+                                $borderStyle = (strpos($grup['dashArray'], '1') !== false) ? 'dotted' : 'dashed';
+                            }
+                            
+                            $cssIcon = "display:inline-block; width:18px; height:14px; background:{$grup['fillColor']}; border:2px {$borderStyle} {$grup['color']}; border-radius:2px; opacity:0.8;";
+                        } 
+                        // 2. JIKA LINE (Garis Lurus)
+                        else if ($jenis == 'Line') {
+                            $panelGroupName = " 🛤️ Data Jalur (Garis)";
+                            $cssIcon = "display:inline-block; width:20px; height:4px; background:{$grup['color']}; margin-top:6px;";
+                        }
+                        // 3. JIKA POINT (Lingkaran)
+                        else if ($jenis == 'Point') {
+                            $panelGroupName = " 📍 Data Lokasi (Titik)";
+                            $cssIcon = "display:inline-block; width:12px; height:12px; background:{$grup['color']}; border:2px solid #fff; border-radius:50%; box-shadow:0 0 2px #000;";
+                        }
+                    ?>
+
+                    // --- C. BUAT LAYER LEAFLET ---
+                    var layer_<?= $grup['id_dg'] ?> = L.geoJSON(dataGrup_<?= $grup['id_dg'] ?>, {
+                        
+                        // Style hanya berefek ke Polygon & Line (Point butuh pointToLayer khusus, nanti saja)
+                        style: style_<?= $grup['id_dg'] ?>,
+                        
+                        onEachFeature: function(feature, layer) {
+                            // Popup Modern
+                            var props = feature.properties;
+                            var content = `
+                                <div style="min-width:220px; font-family:sans-serif;">
+                                    <div style="background:${style_<?= $grup['id_dg'] ?>.color}; padding:8px 12px; border-radius:6px 6px 0 0; color:white;">
+                                        <h6 style="margin:0; font-weight:700; font-size:0.95rem;">${props.nama}</h6>
+                                    </div>
+                                    <div style="padding:10px;">
+                            `;
+                            
+                            if(props.info && props.info.length > 0) {
+                                content += `<table style="width:100%; font-size:0.85rem; border-collapse:collapse;">`;
+                                props.info.forEach((attr, idx) => {
+                                    var bg = idx % 2 === 0 ? '#f8f9fa' : 'white';
+                                    content += `<tr style="background:${bg}; border-bottom:1px solid #eee;">
+                                        <td style="padding:4px 8px; color:#666;">${attr.label}</td>
+                                        <td style="padding:4px 8px; font-weight:600; text-align:right;">${attr.value}</td>
+                                    </tr>`;
+                                });
+                                content += `</table>`;
+                            } else {
+                                content += `<p style="font-size:0.85rem; color:#888; text-align:center; margin:10px 0;">Tidak ada data atribut.</p>`;
+                            }
+
+                            if(props.pdf) {
+                                content += `
+                                    <a href="<?= base_url('uploads/pdf/') ?>/${props.pdf}" target="_blank" 
+                                       style="display:block; margin-top:10px; background:#dc3545; color:white; text-align:center; padding:8px; border-radius:4px; text-decoration:none; font-size:0.85rem; font-weight:600; transition:0.2s;">
+                                       <i class="fa-solid fa-file-pdf"></i> Unduh Dokumen PDF
+                                    </a>`;
+                            }
+                            content += `</div></div>`;
+                            
+                            layer.bindPopup(content);
+                            searchGroup.addLayer(layer);
+                        }
+                    });
+
+                    // --- D. PUSH KE PANEL LAYERS DENGAN GRUP TEPAT ---
+                    overLayers.push({
+                        active: true, // Default Tercentang
+                        group: "<?= $panelGroupName ?>", // Judul Grup (Kolom)
+                        name: `<span style="<?= $cssIcon ?> margin-right:8px; vertical-align:middle;"></span> <?= $grup['nama_grup'] ?>`,
+                        layer: layer_<?= $grup['id_dg'] ?>
+                    });
+
+                <?php endif; ?>
+            <?php endforeach; ?>
+        <?php endif; ?>
+
+        // --- 5. PANEL LAYERS CONTROL ---
         var panelLayers = new L.Control.PanelLayers(baseLayers, overLayers, {
-            selectorGroup: true,
             collapsibleGroups: true,
-            collapsed: false
+            collapsed: false,
+            position: 'topright',
+            compact: true
         });
         map.addControl(panelLayers);
 
-        // 9. Tombol Toggle Panel Layers (Custom Control)
-        var PanelButtonControl = L.Control.extend({
-            options: { position: 'topright' },
-            onAdd: function(map) {
-                var container = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-custom');
-                container.innerHTML = '<img src="<?= base_url() ?>assets/stack.svg" width="20" height="20">';
-                container.onclick = function() {
-                    var panel = $(panelLayers.getContainer());
-                    if (panel.is(":visible")) {
-                        panel.hide();
-                    } else {
-                        panel.show();
-                    }
-                };
-                return container;
-            },
+        // --- 6. SEARCH FUNCTION ---
+        var searchControl = new L.Control.Search({
+            layer: searchGroup,
+            propertyName: 'nama',
+            marker: false,
+            initial: false,
+            zoom: 16,
+            moveToLocation: function(latlng, title, map) {
+                map.setView(latlng, 16);
+                if(latlng.layer.openPopup) latlng.layer.openPopup();
+            }
         });
-        map.addControl(new PanelButtonControl());
-
-        // 10. Fix Rendering Map
-        setTimeout(function() {
-            map.invalidateSize();
-        }, 500);
-
-        // 11. Logic Toggle Menu Admin (Popup Logo)
-        $(document).ready(function() {
-            $('#arrow').click(function() {
-                $('#popup-logo-container').fadeToggle('fast');
-                // Ubah arah panah
-                var text = $(this).text();
-                $(this).text(text == "▼" ? "▲" : "▼");
-            });
+        document.getElementById('search-input').addEventListener('keyup', function(e) {
+            searchControl.searchText(this.value);
         });
+
+        // --- 7. UI INTERACTIONS ---
+        function toggleMenu() {
+            var menu = document.getElementById('menu-dropdown');
+            var arrow = document.getElementById('menu-arrow');
+            if (menu.style.display === 'block') {
+                menu.style.display = 'none';
+                arrow.classList.remove('open');
+            } else {
+                menu.style.display = 'block';
+                arrow.classList.add('open');
+            }
+        }
+
+        // Close menu when clicking outside
+        document.addEventListener('click', function(event) {
+            var header = document.getElementById('header-box');
+            var menu = document.getElementById('menu-dropdown');
+            if (!header.contains(event.target) && !menu.contains(event.target)) {
+                menu.style.display = 'none';
+                document.getElementById('menu-arrow').classList.remove('open');
+            }
+        });
+
+        // Fix Render Leaflet
+        setTimeout(() => { map.invalidateSize(); }, 500);
 
     </script>
 </body>

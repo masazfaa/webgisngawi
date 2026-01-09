@@ -7,53 +7,66 @@ use App\Models\PoligonModel;
 
 class Home extends BaseController
 {
-    protected $grupModel;
-    protected $poligonModel;
-
-    public function __construct()
-    {
-        $this->grupModel    = new GeospasialGrupModel();
-        $this->poligonModel = new PoligonModel();
-    }
-
     public function index()
     {
-        // 1. Ambil Semua Grup yang jenisnya Polygon
-        $grupPolygon = $this->grupModel->where('jenis_peta', 'Polygon')->findAll();
+        $grupModel    = new GeospasialGrupModel();
+        $poligonModel = new PoligonModel();
 
-        // 2. Ambil Data Poligon untuk setiap Grup
+        // 1. Ambil Grup
+        $grupPolygon = $grupModel->where('jenis_peta', 'Polygon')->findAll();
+
         foreach ($grupPolygon as &$grup) {
-            $polygons = $this->poligonModel->where('id_dg', $grup['id_dg'])->findAll();
-            
-            // Kita perlu menyusun FeatureCollection GeoJSON agar mudah dibaca Leaflet
+            $polygons = $poligonModel->where('id_dg', $grup['id_dg'])->findAll();
             $features = [];
+
             foreach ($polygons as $p) {
-                // Decode string GeoJSON dari database
-                $geometry = json_decode($p['data_geospasial']);
-                $properties = [
-                    'id' => $p['id'],
+                // A. DECODE JSON DARI DB
+                $rawGeo = json_decode($p['data_geospasial']);
+                
+                // Validasi: Pastikan data tidak kosong
+                if (!$rawGeo) continue;
+
+                // B. AMBIL GEOMETRY NYA SAJA
+                // Kasus 1: Jika di DB tersimpan {"type":"Feature", "geometry":{...}} -> Ambil ->geometry
+                // Kasus 2: Jika di DB tersimpan {"type":"Polygon", ...} -> Pakai langsung
+                $geometry = null;
+                if (isset($rawGeo->geometry)) {
+                    $geometry = $rawGeo->geometry;
+                } else if (isset($rawGeo->type) && ($rawGeo->type == 'Polygon' || $rawGeo->type == 'MultiPolygon')) {
+                    $geometry = $rawGeo;
+                }
+
+                if (!$geometry) continue; // Skip jika geometri tidak valid
+
+                // C. SUSUN ATRIBUT (PROPERTIES)
+                $atributDB = json_decode($p['atribut_tambahan'], true) ?? [];
+                
+                // Kita rapikan atribut agar enak dibaca di JS
+                $finalProps = [
+                    'id'   => $p['id'],
                     'nama' => $p['nama_dg'],
-                    'atribut' => json_decode($p['atribut_tambahan'], true) // Decode atribut JSON
+                    'pdf'  => $p['file_path'] ?? null,
+                    'info' => $atributDB // Array [{label:..., value:...}]
                 ];
 
+                // D. SUSUN ULANG MENJADI FEATURE GEOJSON STANDAR
                 $features[] = [
-                    'type' => 'Feature',
-                    'properties' => $properties,
-                    'geometry' => $geometry
+                    'type'       => 'Feature',
+                    'properties' => $finalProps,
+                    'geometry'   => $geometry // Ini isinya {type:Polygon, coordinates:[...]}
                 ];
             }
 
-            $grup['geojson'] = [
-                'type' => 'FeatureCollection',
+            // E. BUNGKUS SATU GRUP MENJADI FEATURE COLLECTION
+            $grup['final_geojson'] = [
+                'type'     => 'FeatureCollection',
                 'features' => $features
             ];
         }
 
-        $data = [
-            'title' => 'Peta Persebaran',
-            'layers' => $grupPolygon // Kirim data yang sudah distrukturkan ke View
-        ];
-
-        return view('v_home', $data); // Sesuaikan nama file view kamu
+        return view('v_home', [
+            'title'  => 'Peta Persebaran',
+            'layers' => $grupPolygon
+        ]);
     }
 }

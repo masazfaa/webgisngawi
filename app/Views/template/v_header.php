@@ -7,7 +7,7 @@
     <button id="navToggle" title="Toggle Navigation">
       <i class="fas fa-bars"></i>
     </button>
-    <div class="title">WebGIS Manajemen Kerusakan Jalan</div>
+    <div class="title">Data Management</div>
   </div>
 </header>
 

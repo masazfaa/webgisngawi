@@ -27,7 +27,7 @@ class Home extends BaseController
     public function data()
     {
         $data = [
-            'title' => 'Manajemen Laporan',
+            'title' => 'Manajemen Data',
             // 'dataLaporan' => $this->m_aset->getAllLaporan(),
             'isi' => 'v_data'
         ];

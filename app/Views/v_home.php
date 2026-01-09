@@ -195,7 +195,7 @@
 
     <div id="popup-logo-container">
         <ul>
-            <li><a href="<?= base_url('home/data') ?>">Login Admin</a></li>
+            <li><a href="<?= base_url('data') ?>">Login Admin</a></li>
         </ul>
     </div>
 

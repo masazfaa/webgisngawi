@@ -117,7 +117,7 @@
             top: 20px;
             left: 280px; /* Sebelah kanan logo */
             z-index: 1000;
-            width: 13vw;
+            width: 22vw;
         }
 
         #search-container input {

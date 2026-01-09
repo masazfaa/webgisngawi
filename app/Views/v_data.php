@@ -1,7 +1,8 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
 <style>
-    /* Styling Container Utama */
+    /* Container Utama */
     .container {
       justify-content: unset;
     }
@@ -13,6 +14,8 @@
         overflow: hidden;
         margin-top: 10px;
     }
+    
+    /* Header Tabs */
     .geo-header {
         background-color: #fff;
         border-bottom: 1px solid #dee2e6;
@@ -27,44 +30,36 @@
     .nav-tabs .nav-link.active {
         color: #0d6efd; background: transparent; border-bottom: 3px solid #0d6efd; font-weight: bold;
     }
+    
+    /* Content Area */
     .tab-content { padding: 20px; background: #fff; min-height: 400px; }
 
-    /* Map Preview & Drawing Styles */
+    /* Map Styles */
     #map_style_preview, #map_draw_polygon {
-        height: 300px; width: 100%; border: 1px solid #ccc; border-radius: 4px;
+        height: 350px; width: 100%; border: 1px solid #ccc; border-radius: 4px;
     }
+    
+    /* Utilitas */
     .attr-row { display: flex; gap: 10px; margin-bottom: 10px; }
-    .btn-xs {
-    padding: 0.15rem 0.5rem; /* Padding lebih tipis */
-    font-size: 0.75rem;      /* Font lebih kecil */
-    line-height: 1.5;
-    border-radius: 0.2rem;
-    }
-
-    /* Opsional: Agar ikon dan teks di tombol rata tengah */
-    .btn-xs i {
-        font-size: 0.7rem;
-        margin-right: 2px;
-    }
+    .btn-xs { padding: 0.15rem 0.5rem; font-size: 0.75rem; line-height: 1.5; border-radius: 0.2rem; }
+    .btn-xs i { font-size: 0.7rem; margin-right: 2px; }
+    
+    /* Scrollable Area */
     .scrollable-area {
-    max-height: 65vh; /* Tinggi maksimal 65% dari layar */
-    overflow-y: auto; /* Munculkan scrollbar jika konten melebihi */
-    padding-right: 5px; /* Jarak agar scrollbar tidak menempel konten */
+        max-height: 65vh;
+        overflow-y: auto;
+        padding-right: 5px;
     }
+    .scrollable-area::-webkit-scrollbar { width: 6px; }
+    .scrollable-area::-webkit-scrollbar-track { background: #f1f1f1; }
+    .scrollable-area::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+    .scrollable-area::-webkit-scrollbar-thumb:hover { background: #aaa; }
 
-    /* Mempercantik Scrollbar (Chrome/Safari/Edge) */
-    .scrollable-area::-webkit-scrollbar {
-        width: 6px;
-    }
-    .scrollable-area::-webkit-scrollbar-track {
-        background: #f1f1f1; 
-    }
-    .scrollable-area::-webkit-scrollbar-thumb {
-        background: #ccc; 
-        border-radius: 3px;
-    }
-    .scrollable-area::-webkit-scrollbar-thumb:hover {
-        background: #aaa; 
+    /* Loading State untuk Tombol Simpan */
+    .btn-loading {
+        pointer-events: none;
+        opacity: 0.65;
+        cursor: not-allowed;
     }
 </style>
 
@@ -72,17 +67,17 @@
     <div class="geo-header">
         <ul class="nav nav-tabs" id="geoTab" role="tablist">
             <li class="nav-item">
-                <button class="nav-link active" id="polygon-tab" data-bs-toggle="tab" data-bs-target="#polygon-pane" type="button">
+                <button class="nav-link active" id="polygon-tab" data-bs-toggle="tab" data-bs-target="#polygon-pane">
                     <i class="fas fa-draw-polygon me-1"></i> Data Poligon
                 </button>
             </li>
             <li class="nav-item">
-                <button class="nav-link" id="line-tab" data-bs-toggle="tab" data-bs-target="#line-pane" type="button">
+                <button class="nav-link" id="line-tab" data-bs-toggle="tab" data-bs-target="#line-pane">
                     <i class="fas fa-route me-1"></i> Data Line
                 </button>
             </li>
             <li class="nav-item">
-                <button class="nav-link" id="point-tab" data-bs-toggle="tab" data-bs-target="#point-pane" type="button">
+                <button class="nav-link" id="point-tab" data-bs-toggle="tab" data-bs-target="#point-pane">
                     <i class="fas fa-map-marker-alt me-1"></i> Data Point
                 </button>
             </li>
@@ -91,135 +86,128 @@
 
     <div class="tab-content" id="geoTabContent">
 
-              <div class="tab-pane fade show active" id="polygon-pane">
-                  
-                  <div class="d-flex justify-content-between align-items-center mb-3">
-                      <button class="btn btn-primary" onclick="openGrupModal()">
-                          <i class="fas fa-layer-group"></i> Buat Grup Baru
-                      </button>
+        <div class="tab-pane fade show active" id="polygon-pane">
+            
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <button class="btn btn-primary" onclick="openGrupModal()">
+                    <i class="fas fa-layer-group"></i> Buat Grup Baru
+                </button>
 
-                      <div class="input-group" style="width: 300px;">
-                          <span class="input-group-text bg-white text-muted border-end-0">
-                              <i class="fas fa-search"></i>
-                          </span>
-                          <input type="text" id="searchGroupInput" class="form-control border-start-0 ps-0" placeholder="Cari Grup Poligon...">
-                      </div>
-                  </div>
+                <div class="input-group" style="width: 300px;">
+                    <span class="input-group-text bg-white text-muted border-end-0"><i class="fas fa-search"></i></span>
+                    <input type="text" id="searchGroupInput" class="form-control border-start-0 ps-0" placeholder="Cari Grup Poligon...">
+                </div>
+            </div>
 
-                  <div class="accordion scrollable-area" id="accordionPolygon">
-                      <?php if(!empty($grupPolygon)): foreach($grupPolygon as $index => $grup): ?>
-                      
-                      <div class="accordion-item grup-item">
-                          <h2 class="accordion-header" id="heading<?= $grup['id_dg'] ?>">
-                              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse<?= $grup['id_dg'] ?>">
-                                  <span class="d-flex align-items-center w-100">
-                                      
-                                      <span class="me-3 shadow-sm" 
-                                            style="
-                                              display: inline-block;
-                                              width: 50px; height: 25px;
-                                              background-color: <?= $grup['fillColor'] ?>;
-                                              border: <?= min($grup['weight'], 5) ?>px <?= !empty($grup['dashArray']) ? 'dashed' : 'solid' ?> <?= $grup['color'] ?>;
-                                              opacity: 0.9; border-radius: 2px;
-                                            ">
-                                      </span>
+            <div class="accordion scrollable-area" id="accordionPolygon">
+                <?php if(!empty($grupPolygon)): foreach($grupPolygon as $index => $grup): ?>
+                
+                <div class="accordion-item grup-item">
+                    <h2 class="accordion-header" id="heading<?= $grup['id_dg'] ?>">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse<?= $grup['id_dg'] ?>">
+                            <span class="d-flex align-items-center w-100">
+                                <span class="me-3 shadow-sm" style="display: inline-block; width: 50px; height: 25px; background-color: <?= $grup['fillColor'] ?>; border: <?= min($grup['weight'], 5) ?>px <?= !empty($grup['dashArray']) ? 'dashed' : 'solid' ?> <?= $grup['color'] ?>; opacity: 0.9; border-radius: 2px;"></span>
 
-                                      <div class="d-flex flex-column">
-                                          <strong class="grup-name"><?= $grup['nama_grup'] ?></strong>
-                                          <small class="text-muted" style="font-size: 0.75rem;">
-                                              (Color: <?= $grup['color'] ?> | Items: <?= count($grup['items']) ?>)
-                                          </small>
-                                      </div>
-
-                                  </span>
-                              </button>
-                          </h2>
+                                <div class="d-flex flex-column">
+                                    <strong class="grup-name"><?= $grup['nama_grup'] ?></strong>
+                                    <small class="text-muted" style="font-size: 0.75rem;">(Color: <?= $grup['color'] ?> | Items: <?= count($grup['items']) ?>)</small>
+                                </div>
+                            </span>
+                        </button>
+                    </h2>
+                    <div id="collapse<?= $grup['id_dg'] ?>" class="accordion-collapse collapse" data-bs-parent="#accordionPolygon">
                           <div id="collapse<?= $grup['id_dg'] ?>" class="accordion-collapse collapse" data-bs-parent="#accordionPolygon">
                               <div class="accordion-body">
                                   
-                                  <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
+                                  <div class="d-flex justify-content-between align-items-end mb-3 border-bottom pb-2">
+                                      
                                       <div>
-                                          <button class="btn btn-sm btn-outline-primary" onclick='openGrupModal(<?= json_encode($grup) ?>)'>
-                                              <i class="fas fa-palette"></i> Edit Style Grup
+                                          <button class="btn btn-sm btn-outline-primary" onclick='openGrupModal(<?= json_encode($grup) ?>)' title="Edit Style Grup">
+                                              <i class="fas fa-palette"></i> Style
                                           </button>
-                                          <button class="btn btn-sm btn-outline-danger" onclick="deleteGrup(<?= $grup['id_dg'] ?>)">
-                                              <i class="fas fa-trash"></i> Hapus Grup
+                                          <button class="btn btn-sm btn-outline-danger" onclick="deleteGrup(<?= $grup['id_dg'] ?>)" title="Hapus Grup">
+                                              <i class="fas fa-trash"></i> Hapus
                                           </button>
                                       </div>
-                                      <button class="btn btn-sm btn-success" onclick='openAddPolygon(<?= $grup["id_dg"] ?>, <?= json_encode($grup) ?>)'>
-                                          <i class="fas fa-plus"></i> Tambah Poligon
-                                      </button>
+
+                                      <div class="d-flex align-items-center gap-2">
+                                          <div class="input-group input-group-sm" style="width: 200px;">
+                                              <span class="input-group-text bg-light border-end-0"><i class="fas fa-search text-muted"></i></span>
+                                              <input type="text" class="form-control border-start-0 search-in-group" placeholder="Cari nama..." style="box-shadow: none;">
+                                          </div>
+
+                                          <button class="btn btn-sm btn-success" onclick='openAddPolygon(<?= $grup["id_dg"] ?>, <?= json_encode($grup) ?>)'>
+                                              <i class="fas fa-plus"></i> Tambah
+                                          </button>
+                                      </div>
                                   </div>
 
-                                  <table class="table table-sm table-hover table-bordered mb-0">
+                                  <table class="table table-sm table-hover table-bordered mb-0 table-in-group">
                                       <thead class="table-light">
                                           <tr>
-                                              <th class="text-center" style="width: 50px;">ID</th>
+                                              <th class="text-center" width="50">ID</th>
                                               <th>Nama Poligon</th>
                                               <th>Atribut</th>
-                                              <th class="text-center" style="width: 140px;">Aksi</th>
+                                              <th class="text-center" width="60">PDF</th>
+                                              <th class="text-center" width="130">Aksi</th>
                                           </tr>
                                       </thead>
                                       <tbody>
                                           <?php if(!empty($grup['items'])): foreach($grup['items'] as $item): ?>
-                                          <tr>
-                                              <td class="text-center align-middle"><?= $item['id'] ?></td>
-                                              <td class="align-middle fw-bold"><?= $item['nama_dg'] ?></td>
+                                          <tr class="item-row"> <td class="text-center align-middle"><?= $item['id'] ?></td>
+                                              <td class="align-middle fw-bold itemName"><?= $item['nama_dg'] ?></td>
                                               <td class="align-middle">
                                                   <?php 
                                                       $attrs = json_decode($item['atribut_tambahan'], true);
                                                       if($attrs) {
                                                           echo '<div style="font-size: 0.8rem; line-height: 1.2;">';
-                                                          foreach($attrs as $a) {
-                                                              echo "<span class='badge bg-light text-dark border me-1'>{$a['label']}: {$a['value']}</span>";
-                                                          }
+                                                          foreach($attrs as $a) echo "<span class='badge bg-light text-dark border me-1'>{$a['label']}: {$a['value']}</span>";
                                                           echo '</div>';
                                                       } else { echo "-"; }
                                                   ?>
                                               </td>
                                               <td class="text-center align-middle">
+                                                  <?php if(!empty($item['pdf'])): ?>
+                                                      <a href="<?= base_url('uploads/pdf/'.$item['pdf']) ?>" target="_blank" class="btn btn-sm btn-outline-danger btn-xs" title="Lihat PDF"><i class="fas fa-file-pdf"></i></a>
+                                                  <?php else: ?>
+                                                      <span class="text-muted small">-</span>
+                                                  <?php endif; ?>
+                                              </td>
+                                              <td class="text-center align-middle">
                                                   <div class="btn-group" role="group">
-                                                      <button type="button" class="btn btn-warning btn-xs text-white" 
-                                                              onclick='openEditPolygon(<?= json_encode($item) ?>, <?= json_encode($grup) ?>)'>
-                                                          <i class="fas fa-edit"></i> Edit
-                                                      </button>
-                                                      <button type="button" class="btn btn-danger btn-xs" 
-                                                              onclick="deleteData('polygon', <?= $item['id'] ?>)">
-                                                          <i class="fas fa-trash"></i> Hapus
-                                                      </button>
+                                                      <button class="btn btn-warning btn-xs text-white" onclick='openEditPolygon(<?= json_encode($item) ?>, <?= json_encode($grup) ?>)'><i class="fas fa-edit"></i></button>
+                                                      <button class="btn btn-danger btn-xs" onclick="deleteData('polygon', <?= $item['id'] ?>)"><i class="fas fa-trash"></i></button>
                                                   </div>
                                               </td>
                                           </tr>
                                           <?php endforeach; else: ?>
-                                              <tr><td colspan="4" class="text-center text-muted py-3 small">Belum ada data poligon di grup ini.</td></tr>
+                                              <tr class="no-data"><td colspan="5" class="text-center text-muted small py-3">Belum ada data.</td></tr>
                                           <?php endif; ?>
+                                          <tr class="search-no-result" style="display: none;">
+                                              <td colspan="5" class="text-center text-muted small py-3">Data tidak ditemukan.</td>
+                                          </tr>
                                       </tbody>
                                   </table>
                               </div>
                           </div>
-                      </div>
-                      <?php endforeach; else: ?>
-                          <div class="alert alert-info text-center mt-3">Belum ada Grup Poligon.</div>
-                      <?php endif; ?>
-                      
-                      <div id="noGroupFound" class="alert alert-warning text-center mt-3" style="display: none;">
-                          Grup poligon tidak ditemukan.
-                      </div>
-                  </div>
-              </div>
-
-        <div class="tab-pane fade" id="line-pane">
-            <div class="alert alert-secondary">Fitur Line akan dikembangkan nanti (Fokus Poligon dulu).</div>
+                    </div>
+                </div>
+                <?php endforeach; else: ?>
+                    <div class="alert alert-info text-center mt-3">Belum ada Grup Poligon.</div>
+                <?php endif; ?>
+                
+                <div id="noGroupFound" class="alert alert-warning text-center mt-3" style="display: none;">Grup poligon tidak ditemukan.</div>
+            </div>
         </div>
 
-        <div class="tab-pane fade" id="point-pane">
-             <div class="alert alert-secondary">Fitur Point akan dikembangkan nanti (Fokus Poligon dulu).</div>
-        </div>
+        <div class="tab-pane fade" id="line-pane"><div class="alert alert-secondary">Fitur Line akan dikembangkan nanti.</div></div>
+        <div class="tab-pane fade" id="point-pane"><div class="alert alert-secondary">Fitur Point akan dikembangkan nanti.</div></div>
     </div>
 </div>
 
 <div class="modal fade" id="modalGrup" tabindex="-1">
-    <div class="modal-dialog modal-xl"> <div class="modal-content">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
             <form action="<?= base_url('geospasial/saveGrup') ?>" method="post">
                 <div class="modal-header">
                     <h5 class="modal-title">Kelola Grup Poligon</h5>
@@ -235,14 +223,9 @@
                                 <label class="fw-bold">Nama Grup</label>
                                 <input type="text" name="nama_grup" id="grup_nama" class="form-control" required placeholder="Contoh: Lahan Pertanian">
                             </div>
-
                             <hr>
                             <label class="fw-bold mb-2">Template Atribut (Default)</label>
-                            <p class="text-muted small mb-2">Tentukan kolom data yang wajib diisi saat membuat poligon baru di grup ini.</p>
-                            
-                            <div id="template_container" class="mb-2" style="max-height: 200px; overflow-y: auto;">
-                                </div>
-                            
+                            <div id="template_container" class="mb-2" style="max-height: 200px; overflow-y: auto;"></div>
                             <button type="button" class="btn btn-sm btn-outline-success w-100" onclick="addTemplateRow()">
                                 <i class="fas fa-plus"></i> Tambah Kolom Atribut
                             </button>
@@ -251,34 +234,12 @@
                         <div class="col-md-4 border-end">
                             <h6 class="border-bottom pb-2 fw-bold">Pengaturan Style</h6>
                             <div class="row g-2">
-                                <div class="col-6">
-                                    <label class="small">Warna Garis</label>
-                                    <input type="color" name="color" id="style_color" class="form-control form-control-color w-100" value="#3388ff">
-                                </div>
-                                <div class="col-6">
-                                    <label class="small">Warna Isi</label>
-                                    <input type="color" name="fillColor" id="style_fillColor" class="form-control form-control-color w-100" value="#3388ff">
-                                </div>
-                                <div class="col-6">
-                                    <label class="small">Tebal Garis</label>
-                                    <input type="number" name="weight" id="style_weight" class="form-control form-control-sm" value="3">
-                                </div>
-                                <div class="col-6">
-                                    <label class="small">Tipe Garis</label>
-                                    <select name="dashArray" id="style_dashArray" class="form-select form-select-sm">
-                                        <option value="">Solid</option>
-                                        <option value="5, 5">Putus-putus</option>
-                                        <option value="1, 5">Titik-titik</option>
-                                    </select>
-                                </div>
-                                <div class="col-6">
-                                    <label class="small">Opacity Garis</label>
-                                    <input type="number" name="opacity" id="style_opacity" class="form-control form-control-sm" value="1.0" step="0.1" max="1">
-                                </div>
-                                <div class="col-6">
-                                    <label class="small">Opacity Isi</label>
-                                    <input type="number" name="fillOpacity" id="style_fillOpacity" class="form-control form-control-sm" value="0.2" step="0.1" max="1">
-                                </div>
+                                <div class="col-6"><label class="small">Warna Garis</label><input type="color" name="color" id="style_color" class="form-control form-control-color w-100" value="#3388ff"></div>
+                                <div class="col-6"><label class="small">Warna Isi</label><input type="color" name="fillColor" id="style_fillColor" class="form-control form-control-color w-100" value="#3388ff"></div>
+                                <div class="col-6"><label class="small">Tebal Garis</label><input type="number" name="weight" id="style_weight" class="form-control form-control-sm" value="3"></div>
+                                <div class="col-6"><label class="small">Tipe Garis</label><select name="dashArray" id="style_dashArray" class="form-select form-select-sm"><option value="">Solid</option><option value="5, 5">Putus-putus</option><option value="1, 5">Titik-titik</option></select></div>
+                                <div class="col-6"><label class="small">Opacity Garis</label><input type="number" name="opacity" id="style_opacity" class="form-control form-control-sm" value="1.0" step="0.1" max="1"></div>
+                                <div class="col-6"><label class="small">Opacity Isi</label><input type="number" name="fillOpacity" id="style_fillOpacity" class="form-control form-control-sm" value="0.2" step="0.1" max="1"></div>
                             </div>
                         </div>
 
@@ -288,9 +249,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary">Simpan Grup & Template</button>
-                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-primary">Simpan Grup & Template</button></div>
             </form>
         </div>
     </div>
@@ -299,9 +258,9 @@
 <div class="modal fade" id="modalDataPolygon" tabindex="-1">
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
-            <form action="<?= base_url('geospasial/save/polygon') ?>" method="post" id="formPolygonData">
+            <form action="<?= base_url('geospasial/save/polygon') ?>" method="post" id="formPolygonData" enctype="multipart/form-data">
                 <div class="modal-header">
-                    <h5 class="modal-title">Data Poligon</h5>
+                    <h5 class="modal-title">Editor Poligon</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
@@ -313,43 +272,40 @@
                         <div class="col-md-4" style="border-right: 1px solid #eee;">
                             <div class="mb-3">
                                 <label>Nama Poligon</label>
-                                <input type="text" name="nama_dg" id="poly_nama" class="form-control" placeholder="Contoh: Sawah Pak Budi" required>
+                                <input type="text" name="nama_dg" id="poly_nama" class="form-control" required>
+                            </div>
+                            
+                            <div class="mb-3 p-2 bg-light border rounded">
+                                <label class="small fw-bold mb-1"><i class="fas fa-file-pdf text-danger"></i> Upload PDF (Opsional)</label>
+                                <input type="file" name="file_pdf" id="poly_pdf" class="form-control form-control-sm" accept="application/pdf">
+                                <small id="pdf_status" class="text-muted d-block mt-1" style="font-size:0.75rem">Kosongkan jika tidak diubah.</small>
                             </div>
                             
                             <hr>
-                            <h6>Atribut Tambahan</h6>
-                            <div id="attribute_container">
-                                </div>
-                            <button type="button" class="btn btn-sm btn-outline-secondary mt-2 w-100" onclick="addAttributeRow()">
-                                <i class="fas fa-plus"></i> Tambah Kolom Atribut
-                            </button>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="m-0">Atribut Tambahan</h6>
+                                <button type="button" class="btn btn-sm btn-outline-success" onclick="addAttributeRow()"><i class="fas fa-plus"></i></button>
+                            </div>
+                            <div id="attribute_container" style="max-height: 300px; overflow-y: auto;"></div>
                         </div>
 
                         <div class="col-md-8">
                             <div class="d-flex justify-content-between mb-2">
-                                <label>Gambar Area / Upload GeoJSON</label>
+                                <span><i class="fas fa-map"></i> Gambar Area</span>
                                 <div>
                                     <input type="file" id="fileGeoJSON" accept=".json,.geojson" class="d-none" onchange="handleFileUpload(this)">
-                                    <button type="button" class="btn btn-sm btn-info text-white" onclick="document.getElementById('fileGeoJSON').click()">
-                                        <i class="fas fa-upload"></i> Upload GeoJSON
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-warning" onclick="clearMapDraw()">
-                                        <i class="fas fa-undo"></i> Reset Gambar
-                                    </button>
+                                    <button type="button" class="btn btn-sm btn-info text-white" onclick="document.getElementById('fileGeoJSON').click()">Upload GeoJSON</button>
+                                    <button type="button" class="btn btn-sm btn-warning" onclick="clearMapDraw()">Reset Gambar</button>
                                 </div>
                             </div>
-                            
                             <div id="map_draw_polygon"></div>
-                            
-                            <div class="alert alert-light mt-2 small">
-                                <i class="fas fa-info-circle"></i> 
-                                <strong>Manual:</strong> Klik peta untuk tambah titik (min 3). Geser marker untuk edit. Klik marker untuk hapus titik.
-                            </div>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary">Simpan Poligon</button>
+                    <button type="submit" id="btnSimpanPoly" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Simpan Data
+                    </button>
                 </div>
             </form>
         </div>
@@ -362,10 +318,9 @@ const DEFAULT_COORD = [-7.408019826354289, 111.4428818182571];
 let styleMap = null, styleLayer = null;
 let drawMap = null, drawLayer = null, markers = [];
 let currentGroupStyle = {}; 
-let currentGroupTemplate = []; // Menyimpan template atribut grup yang dipilih
 
 document.addEventListener('DOMContentLoaded', function () {
-    // Class TableManager tidak berubah (sama seperti sebelumnya)
+    // 1. Table Manager Class (Search & Pagination)
     class TableManager {
         constructor(tableId, paginationId, searchId) {
             this.table = document.getElementById(tableId);
@@ -423,9 +378,9 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    new TableManager('tablePolygon', 'pagPolygon', 'searchPolygon');
+    new TableManager('tablePolygon', 'pagPolygon', 'searchGroupInput');
     
-    // Logic Pencarian Grup (Accordion)
+    // 2. Logic Pencarian Grup (Accordion)
     const searchInput = document.getElementById('searchGroupInput');
     if(searchInput) {
         searchInput.addEventListener('keyup', function(e) {
@@ -435,8 +390,7 @@ document.addEventListener('DOMContentLoaded', function () {
             groups.forEach(group => {
                 const groupName = group.querySelector('.grup-name').textContent.toLowerCase();
                 if(groupName.includes(searchText)) {
-                    group.style.display = ''; 
-                    hasVisibleGroup = true;
+                    group.style.display = ''; hasVisibleGroup = true;
                 } else {
                     group.style.display = 'none'; 
                 }
@@ -445,42 +399,40 @@ document.addEventListener('DOMContentLoaded', function () {
             if(noResult) noResult.style.display = hasVisibleGroup ? 'none' : 'block';
         });
     }
+
+    // 3. Logic Loading Tombol Simpan
+    const formPoly = document.getElementById('formPolygonData');
+    const btnSimpan = document.getElementById('btnSimpanPoly');
+    if(formPoly) {
+        formPoly.addEventListener('submit', function() {
+            btnSimpan.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Mengupload...';
+            btnSimpan.classList.add('btn-loading');
+            // Catatan: Jangan disable tombol via JS jika menggunakan form submit standar karena POST data bisa tidak terkirim di beberapa browser/versi. 
+            // Kita gunakan pointer-events:none dari CSS .btn-loading.
+        });
+    }
 });
 
 // ===========================================
-// 1. LOGIC GRUP (STYLE & TEMPLATE ATRIBUT)
+// 1. LOGIC GRUP
 // ===========================================
 function openGrupModal(data = null) {
     const modalEl = document.getElementById('modalGrup');
     modalEl.querySelector('form').reset();
     document.getElementById('grup_id').value = '';
-    document.getElementById('template_container').innerHTML = ''; // Reset template
+    document.getElementById('template_container').innerHTML = '';
 
-    // Default Style
     let style = { color: '#3388ff', weight: 3, opacity: 1, fillColor: '#3388ff', fillOpacity: 0.2, dashArray: '' };
 
     if (data) {
-        // Mode Edit Grup
         document.getElementById('grup_id').value = data.id_dg;
         document.getElementById('grup_nama').value = data.nama_grup;
-        style = {
-            color: data.color, weight: data.weight, opacity: data.opacity,
-            fillColor: data.fillColor, fillOpacity: data.fillOpacity, dashArray: data.dashArray || ''
-        };
-
-        // Load Template Atribut yang sudah ada
-        try {
-            const templates = JSON.parse(data.atribut_default);
-            if(Array.isArray(templates)) {
-                templates.forEach(t => addTemplateRow(t.label));
-            }
-        } catch(e) {}
+        style = { color: data.color, weight: data.weight, opacity: data.opacity, fillColor: data.fillColor, fillOpacity: data.fillOpacity, dashArray: data.dashArray || '' };
+        try { const t = JSON.parse(data.atribut_default); if(Array.isArray(t)) t.forEach(x => addTemplateRow(x.label)); } catch(e){}
     } else {
-        // Mode Tambah Baru: Berikan 1 baris kosong default
         addTemplateRow();
     }
 
-    // Populate Style Inputs
     document.getElementById('style_color').value = style.color;
     document.getElementById('style_weight').value = style.weight;
     document.getElementById('style_opacity').value = style.opacity;
@@ -488,150 +440,99 @@ function openGrupModal(data = null) {
     document.getElementById('style_fillOpacity').value = style.fillOpacity;
     document.getElementById('style_dashArray').value = style.dashArray;
 
-    modalEl.removeAttribute('aria-hidden');
     bootstrap.Modal.getOrCreateInstance(modalEl).show();
-
-    modalEl.addEventListener('shown.bs.modal', function () {
-        setTimeout(() => { initStyleMap(style); }, 200);
-    }, { once: true });
+    modalEl.addEventListener('shown.bs.modal', () => setTimeout(() => initStyleMap(style), 200), { once: true });
 }
 
-// Fungsi Menambah Baris Template di Modal Grup
 function addTemplateRow(value = '') {
-    const div = document.createElement('div');
-    div.className = 'input-group mb-2';
-    div.innerHTML = `
-        <span class="input-group-text bg-light"><i class="fas fa-tag"></i></span>
-        <input type="text" name="template_attr[]" class="form-control form-control-sm" placeholder="Nama Kolom (mis: Pemilik)" value="${value}" required>
-        <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.parentElement.remove()">&times;</button>
-    `;
+    const div = document.createElement('div'); div.className = 'input-group mb-2';
+    div.innerHTML = `<span class="input-group-text bg-light"><i class="fas fa-tag"></i></span><input type="text" name="template_attr[]" class="form-control form-control-sm" value="${value}" placeholder="Nama Kolom"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.parentElement.remove()">&times;</button>`;
     document.getElementById('template_container').appendChild(div);
 }
 
 function initStyleMap(style) {
     if (styleMap) { styleMap.remove(); styleMap = null; }
-    styleMap = L.map('map_style_preview', {
-        zoomControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false
-    }).setView(DEFAULT_COORD, 13);
+    styleMap = L.map('map_style_preview', { zoomControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false }).setView(DEFAULT_COORD, 13);
     L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}').addTo(styleMap);
-
-    const lat = DEFAULT_COORD[0];
-    const lng = DEFAULT_COORD[1];
-    const latlngs = [[lat + 0.01, lng - 0.01], [lat - 0.01, lng + 0.01], [lat - 0.01, lng - 0.02]];
-
-    styleLayer = L.polygon(latlngs, style).addTo(styleMap);
+    styleLayer = L.polygon([[DEFAULT_COORD[0]+0.01, DEFAULT_COORD[1]-0.01], [DEFAULT_COORD[0]-0.01, DEFAULT_COORD[1]+0.01], [DEFAULT_COORD[0]-0.01, DEFAULT_COORD[1]-0.02]], style).addTo(styleMap);
     styleMap.fitBounds(styleLayer.getBounds(), { padding: [20, 20] });
 
-    // Listener Realtime
-    const ids = ['style_color', 'style_weight', 'style_opacity', 'style_fillColor', 'style_fillOpacity', 'style_dashArray'];
-    ids.forEach(id => {
-        const el = document.getElementById(id);
-        const newEl = el.cloneNode(true);
-        el.parentNode.replaceChild(newEl, el);
-        newEl.addEventListener('input', updateStylePreview);
-        newEl.addEventListener('change', updateStylePreview);
+    ['style_color', 'style_weight', 'style_opacity', 'style_fillColor', 'style_fillOpacity', 'style_dashArray'].forEach(id => {
+        const el = document.getElementById(id); const n = el.cloneNode(true); el.parentNode.replaceChild(n, el);
+        n.addEventListener('input', updateStylePreview); n.addEventListener('change', updateStylePreview);
     });
 }
 
 function updateStylePreview() {
     if (!styleLayer) return;
-    const s = {
-        color: document.getElementById('style_color').value,
-        weight: parseInt(document.getElementById('style_weight').value),
-        opacity: parseFloat(document.getElementById('style_opacity').value),
-        fillColor: document.getElementById('style_fillColor').value,
-        fillOpacity: parseFloat(document.getElementById('style_fillOpacity').value),
-        dashArray: document.getElementById('style_dashArray').value
-    };
-    styleLayer.setStyle(s);
+    styleLayer.setStyle({
+        color: document.getElementById('style_color').value, weight: document.getElementById('style_weight').value, opacity: document.getElementById('style_opacity').value,
+        fillColor: document.getElementById('style_fillColor').value, fillOpacity: document.getElementById('style_fillOpacity').value, dashArray: document.getElementById('style_dashArray').value
+    });
 }
 
-function deleteGrup(id) {
-    if(confirm('Hapus grup ini?')) window.location.href = `<?= base_url('geospasial/deleteGrup') ?>/${id}`;
-}
+function deleteGrup(id) { if(confirm('Hapus grup ini?')) window.location.href = `<?= base_url('geospasial/deleteGrup') ?>/${id}`; }
 
 // ===========================================
 // 2. LOGIC EDITOR POLIGON (AUTO TEMPLATE)
 // ===========================================
-function openAddPolygon(grupId, grupData) {
-    preparePolygonModal(grupId, grupData);
-}
-
-function openEditPolygon(data, grupData) {
-    preparePolygonModal(data.id_dg, grupData, data);
-}
+function openAddPolygon(grupId, grupData) { preparePolygonModal(grupId, grupData); }
+function openEditPolygon(data, grupData) { preparePolygonModal(data.id_dg, grupData, data); }
 
 function preparePolygonModal(grupId, grupData, data = null) {
     const modalEl = document.getElementById('modalDataPolygon');
     document.getElementById('formPolygonData').reset();
     document.getElementById('attribute_container').innerHTML = '';
-    
     document.getElementById('poly_id_grup').value = grupId;
-    
-    // Simpan data grup untuk styling peta & template
-    currentGroupStyle = {
-        color: grupData.color, weight: grupData.weight, opacity: grupData.opacity,
-        fillColor: grupData.fillColor, fillOpacity: grupData.fillOpacity, dashArray: grupData.dashArray
-    };
+    currentGroupStyle = { color: grupData.color, weight: grupData.weight, opacity: grupData.opacity, fillColor: grupData.fillColor, fillOpacity: grupData.fillOpacity, dashArray: grupData.dashArray };
+
+    // Reset tombol simpan dari loading state
+    const btnSimpan = document.getElementById('btnSimpanPoly');
+    if(btnSimpan){
+        btnSimpan.innerHTML = '<i class="fas fa-save"></i> Simpan Data';
+        btnSimpan.classList.remove('btn-loading');
+    }
+
+    const pdfStat = document.getElementById('pdf_status');
 
     if (data) {
-        // --- MODE EDIT ---
+        // EDIT MODE
         document.getElementById('poly_id').value = data.id;
         document.getElementById('poly_nama').value = data.nama_dg;
         document.getElementById('poly_geojson').value = data.data_geospasial;
         
-        // Load atribut yang tersimpan di poligon (override template grup)
-        try {
-            const attrs = JSON.parse(data.atribut_tambahan);
-            if(Array.isArray(attrs)) attrs.forEach(a => addAttributeRow(a.label, a.value));
-        } catch(e){}
+        // Status PDF
+        if(data.pdf) {
+            pdfStat.innerHTML = `<span class='text-success fw-bold'><i class='fas fa-check-circle'></i> File PDF tersedia.</span> Upload baru untuk mengganti.`;
+        } else {
+            pdfStat.textContent = "Belum ada file PDF.";
+        }
+
+        try { const a = JSON.parse(data.atribut_tambahan); if(Array.isArray(a)) a.forEach(x => addAttributeRow(x.label, x.value)); } catch(e){}
     } else {
-        // --- MODE TAMBAH BARU (Load Template dari Grup) ---
+        // ADD MODE
         document.getElementById('poly_id').value = '';
         document.getElementById('poly_geojson').value = '';
-        
-        try {
-            // Ambil template dari data grup
-            const templates = JSON.parse(grupData.atribut_default);
-            if(Array.isArray(templates) && templates.length > 0) {
-                // Loop template dan buat input field kosong
-                templates.forEach(t => addAttributeRow(t.label, '')); 
-            } else {
-                // Jika tidak ada template, buat 1 baris kosong
-                addAttributeRow();
-            }
-        } catch(e) {
-            addAttributeRow();
-        }
+        pdfStat.textContent = "Upload PDF (Opsional)";
+        try { const t = JSON.parse(grupData.atribut_default); if(Array.isArray(t) && t.length > 0) t.forEach(x => addAttributeRow(x.label, '')); else addAttributeRow(); } catch(e) { addAttributeRow(); }
     }
 
-    modalEl.removeAttribute('aria-hidden');
     bootstrap.Modal.getOrCreateInstance(modalEl).show();
-
-    modalEl.addEventListener('shown.bs.modal', function () {
-        setTimeout(() => { initDrawMap(data ? data.data_geospasial : null); }, 200);
-    }, { once: true });
+    modalEl.addEventListener('shown.bs.modal', () => setTimeout(() => initDrawMap(data ? data.data_geospasial : null), 200), { once: true });
 }
 
-// Fungsi Menambah Baris Atribut di Modal Poligon (Label & Value)
 function addAttributeRow(label = '', value = '') {
-    const div = document.createElement('div');
-    div.className = 'attr-row';
-    div.innerHTML = `
-        <input type="text" name="attr_key[]" class="form-control form-control-sm" placeholder="Label" value="${label}" required>
-        <input type="text" name="attr_val[]" class="form-control form-control-sm" placeholder="Isi Data" value="${value}">
-        <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.parentElement.remove()">&times;</button>
-    `;
+    const div = document.createElement('div'); div.className = 'attr-row';
+    div.innerHTML = `<input type="text" name="attr_key[]" class="form-control form-control-sm" placeholder="Label" value="${label}" required><input type="text" name="attr_val[]" class="form-control form-control-sm" placeholder="Isi Data" value="${value}"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.parentElement.remove()">&times;</button>`;
     document.getElementById('attribute_container').appendChild(div);
 }
 
-// --- LOGIC MAP DRAWING (SAMA SEPERTI SEBELUMNYA) ---
+// Map Drawing
 function initDrawMap(geoJsonString = null) {
     if (drawMap) { drawMap.remove(); drawMap = null; }
     drawMap = L.map('map_draw_polygon').setView(DEFAULT_COORD, 14);
     L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}').addTo(drawMap);
-    markers = [];
-    drawLayer = null;
+    markers = []; drawLayer = null;
     if (geoJsonString) loadGeoJSON(geoJsonString);
     drawMap.on('click', function(e) { addMarker(e.latlng); });
 }
@@ -639,13 +540,8 @@ function initDrawMap(geoJsonString = null) {
 function addMarker(latlng) {
     const m = L.marker(latlng, { draggable: true }).addTo(drawMap);
     m.on('drag', updatePolyFromMarkers);
-    m.on('click', function() {
-        drawMap.removeLayer(m);
-        markers = markers.filter(x => x !== m);
-        updatePolyFromMarkers();
-    });
-    markers.push(m);
-    updatePolyFromMarkers();
+    m.on('click', function() { drawMap.removeLayer(m); markers = markers.filter(x => x !== m); updatePolyFromMarkers(); });
+    markers.push(m); updatePolyFromMarkers();
 }
 
 function updatePolyFromMarkers() {
@@ -654,9 +550,7 @@ function updatePolyFromMarkers() {
     if (latlngs.length >= 3) {
         drawLayer = L.polygon(latlngs, currentGroupStyle).addTo(drawMap);
         document.getElementById('poly_geojson').value = JSON.stringify(drawLayer.toGeoJSON());
-    } else {
-        document.getElementById('poly_geojson').value = '';
-    }
+    } else document.getElementById('poly_geojson').value = '';
 }
 
 function clearMapDraw() {
@@ -667,35 +561,69 @@ function clearMapDraw() {
 }
 
 function handleFileUpload(input) {
-    const file = input.files[0];
-    if(!file) return;
+    const file = input.files[0]; if(!file) return;
     const r = new FileReader();
-    r.onload = function(e) {
-        try {
-            const json = JSON.parse(e.target.result);
-            clearMapDraw();
-            loadGeoJSON(JSON.stringify(json));
-        } catch(err) { alert('GeoJSON Invalid'); }
-    };
-    r.readAsText(file);
-    input.value = '';
+    r.onload = function(e) { try { const json = JSON.parse(e.target.result); clearMapDraw(); loadGeoJSON(JSON.stringify(json)); } catch(err) { alert('GeoJSON Invalid'); } };
+    r.readAsText(file); input.value = '';
 }
 
 function loadGeoJSON(jsonString) {
-    const json = JSON.parse(jsonString);
-    const layer = L.geoJSON(json);
-    const layers = layer.getLayers();
+    const json = JSON.parse(jsonString); const layer = L.geoJSON(json); const layers = layer.getLayers();
     if(layers.length > 0 && layers[0] instanceof L.Polygon) {
-        let latlngs = layers[0].getLatLngs();
-        if(Array.isArray(latlngs[0])) latlngs = latlngs[0];
-        latlngs.forEach(ll => addMarker(ll));
-        drawMap.fitBounds(layers[0].getBounds());
-    } else {
-        alert('Data bukan poligon.');
-    }
+        let latlngs = layers[0].getLatLngs(); if(Array.isArray(latlngs[0])) latlngs = latlngs[0];
+        latlngs.forEach(ll => addMarker(ll)); drawMap.fitBounds(layers[0].getBounds());
+    } else alert('Data bukan poligon.');
 }
 
 function deleteData(type, id) {
     if(confirm('Hapus data ini?')) window.location.href = `<?= base_url('geospasial/delete') ?>/${type}/${id}`;
 }
+
+
+// ===========================================
+// LOGIKA PENCARIAN DI DALAM SETIAP GRUP
+// ===========================================
+document.addEventListener('keyup', function(e) {
+    // Cek apakah elemen yang diketik adalah input pencarian grup
+    if (e.target && e.target.classList.contains('search-in-group')) {
+        const input = e.target;
+        const filter = input.value.toLowerCase();
+        
+        // Cari container accordion-body terdekat
+        const body = input.closest('.accordion-body');
+        
+        // Cari tabel di dalam body tersebut
+        const rows = body.querySelectorAll('.table-in-group tbody .item-row');
+        const noResultRow = body.querySelector('.search-no-result');
+        const noDataRow = body.querySelector('.no-data'); // Baris "Belum ada data" bawaan PHP
+        
+        let hasVisible = false;
+
+        rows.forEach(row => {
+            // Ambil teks dari kolom Nama (class itemName)
+            const nameCell = row.querySelector('.itemName');
+            const text = nameCell ? nameCell.textContent.toLowerCase() : '';
+            
+            // Cek juga atribut di dalamnya (opsional, biar pencarian lebih luas)
+            const rowText = row.textContent.toLowerCase();
+
+            if (rowText.indexOf(filter) > -1) {
+                row.style.display = "";
+                hasVisible = true;
+            } else {
+                row.style.display = "none";
+            }
+        });
+
+        // Tampilkan pesan "Tidak ditemukan" jika hasil filter kosong
+        // Tapi jangan tampilkan jika memang datanya kosong dari awal (noDataRow visible)
+        if (noResultRow) {
+            if (!hasVisible && (!noDataRow || noDataRow.style.display === 'none')) {
+                noResultRow.style.display = "table-row";
+            } else {
+                noResultRow.style.display = "none";
+            }
+        }
+    }
+});
 </script>

@@ -124,6 +124,7 @@ class FinalGeospasialSchema extends Migration
             'judul_pdf' => ['type' => 'VARCHAR', 'constraint' => '255'],
             'file_path' => ['type' => 'VARCHAR', 'constraint' => '255'],
             'created_at' => ['type' => 'DATETIME', 'null' => true],
+            'updated_at' => ['type' => 'DATETIME', 'null' => true],
         ]);
         $this->forge->addKey('id', true);
         $this->forge->addForeignKey('poligon_id', 'poligon', 'id', 'CASCADE', 'CASCADE');

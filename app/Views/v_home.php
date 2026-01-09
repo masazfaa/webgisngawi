@@ -53,7 +53,7 @@
             left: 10px;
             background-color: white;
             border-radius: 10px;
-            width: 300px;
+            width: 260px;
             height: 60px;
             display: flex;
             justify-content: center;
@@ -84,7 +84,7 @@
         #popup-logo-container {
             position: absolute;
             top: 80px;
-            left: 20px;
+            left: 50px;
             background-color: white;
             border-radius: 8px;
             padding: 10px 20px;
@@ -115,9 +115,9 @@
         #search-filter-container {
             position: absolute;
             top: 20px;
-            left: 330px; /* Sebelah kanan logo */
+            left: 280px; /* Sebelah kanan logo */
             z-index: 1000;
-            width: 300px;
+            width: 13vw;
         }
 
         #search-container input {
@@ -149,6 +149,9 @@
         }
 
         /* --- Custom Controls --- */
+        .leaflet-top.leaflet-left {
+            top: 70px; /* Geser control leaflet ke bawah agar tidak tertutup */
+        }
         .leaflet-control-custom {
             background-color: white;
             width: 34px;
@@ -175,28 +178,6 @@
         .leaflet-panel-layers-list {
             max-height: 50vh;
             overflow-y: auto;
-        }
-
-        /* --- Responsive --- */
-        @media (max-width: 768px) {
-            #logo-container {
-                position: relative;
-                top: 10px;
-                left: 10px;
-                width: calc(100% - 20px);
-            }
-
-            #search-filter-container {
-                position: relative;
-                top: 20px;
-                left: 10px;
-                width: calc(100% - 20px);
-                margin-left: 0;
-            }
-
-            .leaflet-top.leaflet-left {
-                top: 140px; /* Geser control leaflet ke bawah agar tidak tertutup */
-            }
         }
     </style>
 </head>

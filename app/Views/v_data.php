@@ -897,4 +897,57 @@ function analyzeGeoJSON(input) {
     reader.readAsText(file);
 }
 
+
+// --- FUNGSI EXPORT GEOJSON ---
+function doExportAJAX(idGrup, namaGrup, btn) {
+    // 1. Simpan state tombol asli
+    const originalContent = btn.innerHTML;
+    const originalTitle = btn.title;
+    
+    // 2. Ubah tampilan tombol jadi loading
+    btn.disabled = true;
+    btn.innerHTML = `<i class="fas fa-spinner fa-spin text-success"></i>`;
+    btn.title = "Sedang mengunduh...";
+
+    // 3. Request ke Controller
+    fetch(`<?= base_url('geospasial/exportGeoJSON') ?>/${idGrup}`)
+        .then(response => {
+            if (response.status === 200) {
+                return response.blob();
+            } else {
+                throw new Error('Gagal mengambil data');
+            }
+        })
+        .then(blob => {
+            // 4. Buat link download virtual
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            
+            // Format nama file
+            const cleanName = namaGrup.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            a.download = `${cleanName}_export.geojson`;
+            
+            document.body.appendChild(a);
+            a.click();
+            
+            // Cleanup
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert("Terjadi kesalahan saat mengexport data. Pastikan data geospasial valid.");
+        })
+        .finally(() => {
+            // 5. Kembalikan tombol seperti semula
+            btn.disabled = false;
+            btn.innerHTML = originalContent;
+            btn.title = originalTitle;
+        });
+}
+
+// ... kode script lainnya ...
+
 </script>

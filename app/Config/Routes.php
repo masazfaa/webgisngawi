@@ -25,4 +25,6 @@ $routes->group('geospasial', function($routes) {
     // Route untuk Proses Import GeoJSON (Modal Import Baru)
     $routes->post('importGeoJSONGrup', 'GeospasialController::importGeoJSONGrup');
     $routes->get('getPolygonDetail/(:num)', 'GeospasialController::getPolygonDetail/$1');
+    $routes->get('exportGeoJSON/(:num)', 'GeospasialController::exportGeoJSON/$1');
+    
     });

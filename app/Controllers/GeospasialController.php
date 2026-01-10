@@ -352,4 +352,67 @@ public function saveGrup()
             return $this->response->setJSON(['status' => 'success', 'count' => count($batchPoligon)]);
         }
     }
+
+    public function exportGeoJSON($idGrup)
+    {
+        // 1. Ambil data grup untuk nama file
+        $grup = $this->grupModel->find($idGrup);
+        if (!$grup) return redirect()->back();
+
+        // 2. Ambil semua poligon di grup ini (termasuk kolom data_geospasial)
+        $items = $this->poligonModel->where('id_dg', $idGrup)->findAll();
+
+        $features = [];
+
+        foreach ($items as $item) {
+            // Decode geometri mentah dari database
+            $rawGeo = json_decode($item['data_geospasial'], true);
+            
+            // Validasi: Pastikan ada geometrinya
+            $geometry = null;
+            if (isset($rawGeo['geometry'])) {
+                $geometry = $rawGeo['geometry']; // Jika format simpanan adalah Feature
+            } else if (isset($rawGeo['type']) && $rawGeo['type'] !== 'Feature') {
+                $geometry = $rawGeo; // Jika format simpanan langsung Geometry (Polygon/Point)
+            } else {
+                continue; // Skip jika data rusak
+            }
+
+            // 3. Susun Properties (Gabungan Nama + Atribut Tambahan)
+            $properties = [
+                'id' => $item['id'],
+                'nama_poligon' => $item['nama_dg']
+            ];
+
+            // Konversi atribut_tambahan (JSON Array) menjadi Key-Value standar
+            // Dari: [{"label":"Luas", "value":"100"}] menjadi {"Luas": "100"}
+            $attrs = json_decode($item['atribut_tambahan'], true);
+            if (is_array($attrs)) {
+                foreach ($attrs as $attr) {
+                    if (!empty($attr['label'])) {
+                        $properties[$attr['label']] = $attr['value'];
+                    }
+                }
+            }
+
+            // 4. Buat Object Feature GeoJSON standar
+            $features[] = [
+                'type' => 'Feature',
+                'properties' => $properties,
+                'geometry' => $geometry
+            ];
+        }
+
+        // 5. Bungkus dalam FeatureCollection
+        $geoJSONCollection = [
+            'type' => 'FeatureCollection',
+            'name' => $grup['nama_grup'],
+            'features' => $features
+        ];
+
+        // 6. Force Download sebagai file .geojson
+        $filename = url_title($grup['nama_grup'], '-', true) . '_export.geojson';
+        
+        return $this->response->download($filename, json_encode($geoJSONCollection, JSON_PRETTY_PRINT));
+    }
 }

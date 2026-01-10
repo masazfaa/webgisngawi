@@ -114,6 +114,7 @@
         /* =======================================================
            6. LEAFLET CONTROLS CUSTOMIZATION
         ======================================================== */
+        .leaflet-left {left: 5px;}
         .leaflet-control-container .leaflet-top { top: 80px; } /* Geser control ke bawah */
         .leaflet-bar { border: none !important; box-shadow: var(--shadow-soft) !important; border-radius: 8px !important; overflow: hidden; }
         .leaflet-bar a { width: 36px !important; height: 36px !important; line-height: 36px !important; background: white; color: #444; border-bottom: 1px solid #f0f0f0; transition: 0.2s; }
@@ -360,13 +361,17 @@
 
                             // b. Table Info
                             if(props.info && props.info.length > 0) {
-                                content += `<table style="width: 100%; border-collapse: collapse; font-size: 13px;">`;
+                                content += `<table style="width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed;">`;
                                 props.info.forEach((attr, idx) => {
                                     var bg = idx % 2 === 0 ? '#f9f9f9' : '#ffffff'; 
                                     content += `
                                         <tr style="background: ${bg}; border-bottom: 1px solid #eee;">
-                                            <td style="padding: 10px 15px; color: #666; width: 40%; vertical-align: top;">${attr.label}</td>
-                                            <td style="padding: 10px 15px; font-weight: 500; color: #333; text-align: right;">${attr.value}</td>
+                                            <td style="padding: 10px 15px; color: #666; width: 25%; vertical-align: top; word-wrap: break-word; overflow-wrap: break-word;">
+                                                ${attr.label}
+                                            </td>
+                                            <td style="padding: 10px 15px; font-weight: 500; color: #333; text-align: left; word-wrap: break-word; overflow-wrap: break-word; max-width: 180px;">
+                                                ${attr.value}
+                                            </td>
                                         </tr>`;
                                 });
                                 content += `</table>`;

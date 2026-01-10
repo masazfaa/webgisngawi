@@ -120,10 +120,10 @@
         <div class="tab-pane fade show active" id="polygon-pane">
             <div class="row align-items-center mb-4">
                 <div class="col">
-                    <button class="btn btn-primary px-4 fw-bold" onclick="openGrupModal()" style="background: var(--primary); border:none;">
+                    <button class="btn btn-primary px-4 fw-bold mb-2" onclick="openGrupModal()" style="background: var(--primary); border:none;">
                         <i class="fas fa-layer-group me-2"></i>Grup Baru
                     </button>
-                    <button class="btn btn-outline-primary px-4 fw-bold ms-2" onclick="openImportGrupModal()">
+                    <button class="btn btn-outline-primary px-4 fw-bold mb-2" onclick="openImportGrupModal()">
                         <i class="fas fa-file-import me-2"></i>Import GeoJSON Grup
                     </button>
                 </div>

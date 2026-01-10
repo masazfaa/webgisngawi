@@ -169,7 +169,7 @@
                                     <thead>
                                         <tr>
                                             <th class="text-center" width="60">ID</th>
-                                            <th>Nama Lokasi</th>
+                                            <th>Nama Poligon</th>
                                             <th>Atribut Tambahan</th>
                                             <th class="text-center">Lampiran PDF</th>
                                             <th class="text-center" width="120">Aksi</th>
@@ -391,6 +391,9 @@
                                             <li><a class="dropdown-item" href="javascript:void(0)" onclick="setImportDashPreset('')">Solid</a></li>
                                             <li><a class="dropdown-item" href="javascript:void(0)" onclick="setImportDashPreset('5, 5')">Dashed</a></li>
                                             <li><a class="dropdown-item" href="javascript:void(0)" onclick="setImportDashPreset('1, 10')">Dotted</a></li>
+                                            <li><a class="dropdown-item" href="javascript:void(0)" onclick="setImportDashPreset('10, 5, 1, 5')">Dash-Dot</a></li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li><small class="dropdown-item text-muted" style="font-size: 10px;">Format: panjang_garis, jarak</small></li>
                                         </ul>
                                     </div>
                                 </div>

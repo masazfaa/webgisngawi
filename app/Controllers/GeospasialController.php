@@ -112,6 +112,7 @@ public function saveGrup()
     $idGrup = $this->request->getPost('id_dg');
     $labelColumn = $this->request->getPost('label_column');
 
+    // Data dasar yang diambil dari form
     $dataGrup = [
         'nama_grup'    => $this->request->getPost('nama_grup'),
         'label_column' => $labelColumn,
@@ -123,35 +124,47 @@ public function saveGrup()
         'dashArray'    => $this->request->getPost('dashArray'),
     ];
 
-    // 1. Update Settingan Grup
-    $this->grupModel->update($idGrup, $dataGrup);
+    // --- PERBAIKAN DI SINI ---
+    if (empty($idGrup)) {
+        // 1. JIKA ID KOSONG = INSERT (BUAT GRUP BARU)
+        
+        // Penting: Set jenis_peta secara manual karena di form mungkin tidak ada inputnya
+        $dataGrup['jenis_peta'] = 'Polygon'; 
+        
+        $this->grupModel->insert($dataGrup);
+        
+        // Tidak perlu sinkronisasi label karena grup baru pasti belum punya poligon
+    } else {
+        // 2. JIKA ID ADA = UPDATE (EDIT GRUP)
+        $this->grupModel->update($idGrup, $dataGrup);
 
-    // 2. LOGIC SYNC: Jika kolom label dipilih, update kolom nama_dg di tabel poligon
-    if (!empty($labelColumn)) {
-        // Ambil semua poligon dalam grup ini
-        $items = $this->poligonModel->where('id_dg', $idGrup)->findAll();
+        // LOGIC SYNC: Hanya dijalankan saat update, karena saat insert belum ada itemnya
+        if (!empty($labelColumn)) {
+            // Ambil semua poligon dalam grup ini
+            $items = $this->poligonModel->where('id_dg', $idGrup)->findAll();
 
-        foreach ($items as $item) {
-            $attrs = json_decode($item['atribut_tambahan'], true);
-            $newName = null;
+            foreach ($items as $item) {
+                $attrs = json_decode($item['atribut_tambahan'], true);
+                $newName = null;
 
-            if (is_array($attrs)) {
-                foreach ($attrs as $at) {
-                    if ($at['label'] == $labelColumn && !empty($at['value'])) {
-                        $newName = $at['value'];
-                        break;
+                if (is_array($attrs)) {
+                    foreach ($attrs as $at) {
+                        if ($at['label'] == $labelColumn && !empty($at['value'])) {
+                            $newName = $at['value'];
+                            break;
+                        }
                     }
                 }
-            }
 
-            // Jika ketemu nilai barunya di atribut, update kolom nama_dg-nya
-            if ($newName) {
-                $this->poligonModel->update($item['id'], ['nama_dg' => $newName]);
+                // Jika ketemu nilai barunya di atribut, update kolom nama_dg-nya
+                if ($newName) {
+                    $this->poligonModel->update($item['id'], ['nama_dg' => $newName]);
+                }
             }
         }
     }
 
-    return redirect()->to('geospasial')->with('success', 'Grup dan Nama Poligon berhasil disinkronkan.');
+    return redirect()->to('geospasial')->with('success', 'Data Grup berhasil disimpan.');
 }
 
     public function save($tipe)

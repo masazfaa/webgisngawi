@@ -105,6 +105,21 @@
         }
         .leaflet-panel-layers-item { padding: 8px 10px; border-radius: 6px; transition: 0.2s; }
         .leaflet-panel-layers-item:hover { background-color: #f8f9fa; }
+        /* Container untuk menyejajarkan checkbox dan teks label */
+        .leaflet-panel-layers-item-inject {
+            display: flex;
+            align-items: center; /* Sejajar vertikal tengah */
+            gap: 6px;            /* Jarak antara box dan teks */
+            margin-top: 2px;
+        }
+
+        /* Ukuran checkbox label agar tidak terlalu besar */
+        .label-checkbox-input {
+            cursor: pointer;
+            margin: 0 !important; /* Hapus margin bawaan browser */
+            width: 13px;
+            height: 13px;
+        }
 
         /* CUSTOM BUTTON */
         .custom-btn {
@@ -155,6 +170,25 @@
         /* 4. Sesuaikan panah bawah (Tip) agar menyatu */
         .professional-popup .leaflet-popup-tip {
             background: #fff;
+        }
+
+        /* Style Label Poligon Profesional */
+        .polygon-label {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0,0,0,0.1);
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #333;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            white-space: nowrap;
+            pointer-events: none; /* Supaya label tidak menghalangi klik pada poligon */
+        }
+
+        /* Sembunyikan garis panah bawaan tooltip */
+        .leaflet-tooltip-top:before, .leaflet-tooltip-bottom:before, .leaflet-tooltip-left:before, .leaflet-tooltip-right:before {
+            display: none !important;
         }
     </style>
 </head>
@@ -406,13 +440,51 @@
                             }
                         });
 
-                    // --- D. PUSH KE PANEL LAYERS DENGAN GRUP TEPAT ---
+
+                        // --- D. LOGIKA LABEL (TAMPIL DI TENAH POLIGON) ---
+                        var labelGroup_<?= $grup['id_dg'] ?> = L.layerGroup();
+
+                        layer_<?= $grup['id_dg'] ?>.eachLayer(function(l) {
+                            if (l.getBounds) {
+                                var center = l.getBounds().getCenter();
+                                var labelContent = l.feature.properties.nama || 'Tanpa Nama';
+                                
+                                var label = L.tooltip({
+                                    permanent: true,
+                                    direction: 'center',
+                                    className: 'polygon-label'
+                                })
+                                .setContent(labelContent)
+                                .setLatLng(center);
+                                
+                                labelGroup_<?= $grup['id_dg'] ?>.addLayer(label);
+                            }
+                        });
+
+                        // --- E. TENTUKAN DEFAULT CHECKBOX LABEL ---
+                        <?php 
+                            $isAdministrasi = (stripos($grup['nama_grup'], 'administrasi') !== false) ? 'true' : 'false';
+                        ?>
+                        var labelActive_<?= $grup['id_dg'] ?> = <?= $isAdministrasi ?>;
+
+                    // --- F. PUSH KE PANEL LAYERS DENGAN GRUP TEPAT ---
                     overLayers.push({
-                        active: true, // Default Tercentang
-                        group: "<?= $panelGroupName ?>", // Judul Grup (Kolom)
+                        active: true,
+                        group: "<?= $panelGroupName ?>",
                         name: `<span style="<?= $cssIcon ?> margin-right:8px; vertical-align:middle;"></span> <?= $grup['nama_grup'] ?>`,
-                        layer: layer_<?= $grup['id_dg'] ?>
+                        layer: layer_<?= $grup['id_dg'] ?>,
+                        // Ini bagian box check kedua untuk Label
+                        injectParam: {
+                            label: "Tampilkan Label",
+                            active: labelActive_<?= $grup['id_dg'] ?>,
+                            layer: labelGroup_<?= $grup['id_dg'] ?>
+                        }
                     });
+
+                    // Tambahkan label ke map jika defaultnya tercentang (Administrasi)
+                    if (labelActive_<?= $grup['id_dg'] ?>) {
+                        labelGroup_<?= $grup['id_dg'] ?>.addTo(map);
+                    }
 
                 <?php endif; ?>
             <?php endforeach; ?>
@@ -423,9 +495,90 @@
             collapsibleGroups: true,
             collapsed: false,
             position: 'topright',
-            compact: true
+            compact: true,
+            // Perbaikan fungsi buildItem
+            buildItem: function(item) {
+                // Buat container utama untuk item tambahan
+                var container = L.DomUtil.create('div', 'leaflet-panel-layers-inject-container');
+                container.style.marginLeft = "25px"; // Geser agar sejajar di bawah teks layer
+                container.style.marginTop = "2px";
+
+                if (item.injectParam) {
+                    var node = L.DomUtil.create('div', 'leaflet-panel-layers-item-inject');
+                    
+                    // Buat Input Checkbox
+                    var input = L.DomUtil.create('input', 'label-checkbox-input');
+                    input.type = 'checkbox';
+                    input.checked = item.injectParam.active;
+                    input.style.cursor = 'pointer';
+                    input.style.width = '12px';
+                    input.style.height = '12px';
+                    
+                    // Event Listener untuk nyalakan/matikan label
+                    L.DomEvent.on(input, 'click', function(e) {
+                        // Berhenti agar tidak memicu klik pada layer induk
+                        L.DomEvent.stopPropagation(e);
+                        
+                        item.injectParam.active = e.target.checked;
+                        if (e.target.checked) {
+                            // Hanya tambahkan jika layer induknya juga sedang aktif
+                            if (map.hasLayer(item.layer)) {
+                                item.injectParam.layer.addTo(map);
+                            }
+                        } else {
+                            if (map.hasLayer(item.injectParam.layer)) {
+                                map.removeLayer(item.injectParam.layer);
+                            }
+                        }
+                    });
+
+                    // Buat Label Teks
+                    var labelSpan = L.DomUtil.create('span', '');
+                    labelSpan.innerHTML = ' ' + item.injectParam.label;
+                    labelSpan.style.fontSize = '10px';
+                    labelSpan.style.color = '#666';
+                    labelSpan.style.cursor = 'pointer';
+                    labelSpan.style.verticalAlign = 'middle';
+
+                    // Klik pada teks juga mencentang checkbox
+                    L.DomEvent.on(labelSpan, 'click', function(e) {
+                        L.DomEvent.stopPropagation(e);
+                        input.click();
+                    });
+
+                    node.appendChild(input);
+                    node.appendChild(labelSpan);
+                    container.appendChild(node);
+                    
+                    return container; // Mengembalikan objek Node yang valid
+                }
+                
+                // JANGAN return null, kembalikan elemen kosong jika tidak ada injectParam
+                return L.DomUtil.create('div', ''); 
+            }
         });
         map.addControl(panelLayers);
+
+        map.on('layerremove', function(e) {
+            overLayers.forEach(function(item) {
+                if (e.layer === item.layer && item.injectParam) {
+                    if (map.hasLayer(item.injectParam.layer)) {
+                        map.removeLayer(item.injectParam.layer);
+                    }
+                }
+            });
+        });
+
+        map.on('layeradd', function(e) {
+            overLayers.forEach(function(item) {
+                if (e.layer === item.layer && item.injectParam && item.injectParam.active) {
+                    // Tampilkan label kembali jika checkbox label-nya aktif dan zoom mencukupi
+                    if (map.getZoom() >= 13) {
+                        item.injectParam.layer.addTo(map);
+                    }
+                }
+            });
+        });
 
         // --- 6. SEARCH FUNCTION ---
         var searchControl = new L.Control.Search({
@@ -469,6 +622,28 @@
         // Fix Render Leaflet
         setTimeout(() => { map.invalidateSize(); }, 500);
 
+
+        // Zoom End Event untuk kontrol label
+        map.on('zoomend', function() {
+            var currentZoom = map.getZoom();
+            overLayers.forEach(function(item) {
+                if (item.injectParam && item.injectParam.layer) {
+                    // Jika zoom < 13, sembunyikan semua label grup
+                    if (currentZoom < 13) {
+                        if (map.hasLayer(item.injectParam.layer)) {
+                            map.removeLayer(item.injectParam.layer);
+                        }
+                    } else {
+                        // Jika zoom >= 13, tampilkan label HANYA jika checkbox label-nya tercentang
+                        // Kita perlu mengecek status checkbox dari panel layer
+                        // Namun cara termudah adalah mengecek apakah grup poligon induknya aktif
+                        if (map.hasLayer(item.layer) && item.injectParam.active) {
+                            item.injectParam.layer.addTo(map);
+                        }
+                    }
+                }
+            });
+        });
     </script>
 </body>
 </html>

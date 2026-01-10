@@ -104,39 +104,49 @@ public function getPolygonDetail($id)
 
 public function saveGrup()
 {
-    $id = $this->request->getPost('id_dg');
-    
-    // Tangkap daftar template atribut
-    $template = [];
-    $attrs = $this->request->getPost('template_attr');
-    if ($attrs) {
-        foreach ($attrs as $a) {
-            if ($a) $template[] = ['label' => $a];
+    $idGrup = $this->request->getPost('id_dg');
+    $labelColumn = $this->request->getPost('label_column');
+
+    $dataGrup = [
+        'nama_grup'    => $this->request->getPost('nama_grup'),
+        'label_column' => $labelColumn,
+        'color'        => $this->request->getPost('color'),
+        'weight'       => $this->request->getPost('weight'),
+        'opacity'      => $this->request->getPost('opacity'),
+        'fillColor'    => $this->request->getPost('fillColor'),
+        'fillOpacity'  => $this->request->getPost('fillOpacity'),
+        'dashArray'    => $this->request->getPost('dashArray'),
+    ];
+
+    // 1. Update Settingan Grup
+    $this->grupModel->update($idGrup, $dataGrup);
+
+    // 2. LOGIC SYNC: Jika kolom label dipilih, update kolom nama_dg di tabel poligon
+    if (!empty($labelColumn)) {
+        // Ambil semua poligon dalam grup ini
+        $items = $this->poligonModel->where('id_dg', $idGrup)->findAll();
+
+        foreach ($items as $item) {
+            $attrs = json_decode($item['atribut_tambahan'], true);
+            $newName = null;
+
+            if (is_array($attrs)) {
+                foreach ($attrs as $at) {
+                    if ($at['label'] == $labelColumn && !empty($at['value'])) {
+                        $newName = $at['value'];
+                        break;
+                    }
+                }
+            }
+
+            // Jika ketemu nilai barunya di atribut, update kolom nama_dg-nya
+            if ($newName) {
+                $this->poligonModel->update($item['id'], ['nama_dg' => $newName]);
+            }
         }
     }
 
-    $data = [
-        'nama_grup'       => $this->request->getPost('nama_grup'),
-        'label_column'    => $this->request->getPost('label_column'), // TAMBAHKAN INI
-        'atribut_default' => json_encode($template),
-        'color'           => $this->request->getPost('color'),
-        'weight'          => $this->request->getPost('weight'),
-        'opacity'         => $this->request->getPost('opacity'),
-        'fillColor'       => $this->request->getPost('fillColor'),
-        'fillOpacity'     => $this->request->getPost('fillOpacity'),
-        'dashArray'       => $this->request->getPost('dashArray'),
-    ];
-
-    if ($id) {
-        $this->grupModel->update($id, $data);
-        $msg = 'Grup berhasil diperbarui';
-    } else {
-        $data['jenis_peta'] = 'Polygon'; // Default untuk tab poligon
-        $this->grupModel->insert($data);
-        $msg = 'Grup baru berhasil dibuat';
-    }
-
-    return redirect()->to('geospasial')->with('success', $msg);
+    return redirect()->to('geospasial')->with('success', 'Grup dan Nama Poligon berhasil disinkronkan.');
 }
 
     public function save($tipe)

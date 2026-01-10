@@ -66,7 +66,7 @@
 
         /* Menu Dropdown */
         #menu-dropdown {
-            position: absolute; top: 80px; left: 15px; z-index: 1001;
+            position: absolute; top: 90px; left: 15px; z-index: 1001;
             background: white; border-radius: 10px; padding: 8px 0;
             box-shadow: 0 8px 24px rgba(0,0,0,0.15);
             min-width: 220px; display: none; transform-origin: top left;
@@ -189,7 +189,7 @@
             #header-box { width: auto; max-width: 80%; }
             #coord-box { bottom: 30px; font-size: 0.75rem; width: 45%; justify-content: center; }
         }
-
+        
     </style>
 </head>
 

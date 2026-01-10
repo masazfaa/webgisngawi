@@ -10,7 +10,7 @@ class GeospasialGrupModel extends Model
     protected $primaryKey       = 'id_dg';
     protected $useAutoIncrement = true;
     protected $allowedFields    = [
-        'nama_grup', 'jenis_peta', 'color', 'weight', 'opacity', 
+        'nama_grup','label_column', 'jenis_peta', 'color', 'weight', 'opacity', 
         'dashArray', 'fillColor', 'fillOpacity', 'radius', 'atribut_default'
     ];
     protected $useTimestamps    = true;

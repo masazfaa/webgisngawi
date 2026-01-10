@@ -179,7 +179,7 @@
                                         <?php if(!empty($grup['items'])): foreach($grup['items'] as $item): ?>
                                         <tr class="item-row">
                                             <td class="text-center text-muted small"><?= $item['id'] ?></td>
-                                            <td class="fw-bold itemName"><?= $item['nama_dg'] ?></td>
+                                            <td class="fw-bold itemName"><?= $item['nama_display'] ?></td>
                                             <td>
                                                 <?php 
                                                     $attrs = json_decode($item['atribut_tambahan'], true);
@@ -241,9 +241,19 @@
                     <input type="hidden" name="id_dg" id="grup_id">
                     <div class="row">
                         <div class="col-md-4 border-end">
-                            <div class="mb-4">
+                            <div class="mb-3">
                                 <label class="form-label fw-bold small">Nama Kategori/Grup</label>
                                 <input type="text" name="nama_grup" id="grup_nama" class="form-control" required placeholder="Misal: Batas Administrasi">
+                            </div>
+
+                            <div class="mb-3 p-2 border rounded bg-light">
+                                <label class="form-label fw-bold small text-primary"><i class="fas fa-tag me-1"></i> Penamaan Dinamis</label>
+                                <select name="label_column" id="style_label_column" class="form-select form-select-sm shadow-sm">
+                                    <option value="">-- Gunakan Nama Manual --</option>
+                                    </select>
+                                <small class="text-muted d-block mt-1" style="font-size: 0.65rem;">
+                                    Pilih atribut dari GeoJSON untuk dijadikan Nama Utama di tabel secara otomatis.
+                                </small>
                             </div>
                             <label class="form-label fw-bold small">Template Atribut</label>
                             <div id="template_container" class="mb-3"></div>
@@ -363,10 +373,17 @@
                                 <label class="form-label fw-bold small">Nama Grup Baru</label>
                                 <input type="text" name="nama_grup" class="form-control" required placeholder="Contoh: Batas Administrasi RT">
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label fw-bold small">Pilih File GeoJSON</label>
-                                <input type="file" name="file_geojson" class="form-control" accept=".json,.geojson" required>
-                            </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold small">Pilih File GeoJSON</label>
+                                    <input type="file" id="import_file_input" name="file_geojson" class="form-control" accept=".json,.geojson" required onchange="analyzeGeoJSON(this)">
+                                </div>
+
+                                <div id="column_mapping_container" class="mb-3 d-none">
+                                    <label class="form-label fw-bold small text-success"><i class="fas fa-table me-1"></i> Pilih Kolom Nama Lokasi</label>
+                                    <select name="column_name_map" id="column_name_map" class="form-select form-select-sm shadow-sm border-success">
+                                        </select>
+                                    <small class="text-muted" style="font-size: 0.7rem;">Pilih atribut dari file yang akan dijadikan nama identitas poligon.</small>
+                                </div>
                             <div id="importProgressContainer" class="d-none mt-4 p-3 border rounded bg-light">
                                 <label class="small fw-bold mb-1 d-block text-primary"><i class="fas fa-spinner fa-spin me-1"></i> Memproses Data...</label>
                                 <div class="progress" style="height: 15px;">
@@ -460,19 +477,51 @@ function openGrupModal(data = null) {
     form.reset();
     document.getElementById('template_container').innerHTML = '';
     
+    // Reset dropdown label
+    const labelSelect = document.getElementById('style_label_column');
+    labelSelect.innerHTML = '<option value="">-- Gunakan Nama Manual --</option>';
+
     let style = { color:'#3388ff', weight:3, opacity:1, fillColor:'#3388ff', fillOpacity:0.2, dashArray:'' };
 
     if(data) {
         document.getElementById('grup_id').value = data.id_dg;
         document.getElementById('grup_nama').value = data.nama_grup;
         style = { color:data.color, weight:data.weight, opacity:data.opacity, fillColor:data.fillColor, fillOpacity:data.fillOpacity, dashArray:data.dashArray || '' };
+        
+        // --- MODIFIKASI DI SINI: MENAMPILKAN CONTOH DATA ---
+        if(data.items && data.items.length > 0) {
+            try {
+                // Ambil atribut dari item pertama sebagai sampel kolom
+                const sampleAttrs = JSON.parse(data.items[0].atribut_tambahan);
+                
+                sampleAttrs.forEach(attr => {
+                    const opt = document.createElement('option');
+                    opt.value = attr.label;
+                    
+                    // Tampilkan Label + Contoh Nilainya
+                    // Contoh: "KECAMATAN (Contoh: NGAWI)"
+                    let contohValue = attr.value ? ` (Contoh: ${attr.value})` : ' (Kosong)';
+                    opt.text = attr.label + contohValue;
+                    
+                    if(data.label_column === attr.label) opt.selected = true;
+                    labelSelect.appendChild(opt);
+                });
+            } catch(e) { 
+                console.error("Gagal parse atribut untuk label", e); 
+            }
+        }
+        // ---------------------------------------------------
+
         try { JSON.parse(data.atribut_default).forEach(x => addTemplateRow(x.label)); } catch(e){}
     } else {
         document.getElementById('grup_id').value = '';
         addTemplateRow();
     }
 
-    Object.keys(style).forEach(key => { if(document.getElementById('style_'+key)) document.getElementById('style_'+key).value = style[key]; });
+    // Terapkan style ke input
+    Object.keys(style).forEach(key => { 
+        if(document.getElementById('style_'+key)) document.getElementById('style_'+key).value = style[key]; 
+    });
 
     bootstrap.Modal.getOrCreateInstance(modalEl).show();
     modalEl.addEventListener('shown.bs.modal', () => initStyleMap(style), { once: true });
@@ -800,5 +849,37 @@ async function openEditPolygon(item, grupData, btn) {
     } finally {
         if(btn) btn.style.pointerEvents = 'auto';
     }
+}
+
+function analyzeGeoJSON(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const json = JSON.parse(e.target.result);
+            const mappingContainer = document.getElementById('column_mapping_container');
+            const selectMap = document.getElementById('column_name_map');
+            
+            if (json.features && json.features.length > 0) {
+                const properties = json.features[0].properties;
+                const keys = Object.keys(properties);
+
+                selectMap.innerHTML = '<option value="">-- Gunakan Nama Default --</option>';
+                keys.forEach(key => {
+                    const opt = document.createElement('option');
+                    opt.value = key;
+                    opt.innerText = key + " (Contoh: " + properties[key] + ")";
+                    selectMap.appendChild(opt);
+                });
+
+                mappingContainer.classList.remove('d-none');
+            }
+        } catch (err) {
+            alert("File GeoJSON tidak bisa dibaca/rusak.");
+        }
+    };
+    reader.readAsText(file);
 }
 </script>

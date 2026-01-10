@@ -429,12 +429,52 @@ class GeospasialController extends BaseController
         return redirect()->to('geospasial?tab=' . strtolower($tipe));
     }
 
-    public function deleteGrup($id)
+public function deleteGrup($id)
     {
+        // 1. Ambil Info Grup
         $grup = $this->grupModel->find($id);
-        $tab = strtolower($grup['jenis_peta'] ?? 'polygon');
+        if (!$grup) {
+            return redirect()->back();
+        }
+
+        $jenis = $grup['jenis_peta']; // Line, Point, atau Polygon
+        $tab = strtolower($jenis);
+
+        // 2. Tentukan Model & Foreign Key
+        if ($jenis == 'Line') {
+            $modelItem = $this->lineModel;
+            $fkColumn  = 'line_id';
+        } elseif ($jenis == 'Point') {
+            $modelItem = $this->pointModel;
+            $fkColumn  = 'point_id';
+        } else {
+            $modelItem = $this->poligonModel;
+            $fkColumn  = 'poligon_id';
+        }
+
+        // 3. Ambil SEMUA item (anak) yang ada di grup ini
+        $items = $modelItem->where('id_dg', $id)->findAll();
+
+        // 4. Loop setiap item untuk mencari PDF-nya
+        foreach ($items as $item) {
+            // Ambil daftar PDF milik item ini
+            $pdfs = $this->pdfModel->where($fkColumn, $item['id'])->findAll();
+
+            foreach ($pdfs as $pdf) {
+                $filePath = 'uploads/pdf/' . $pdf['file_path'];
+                
+                // HAPUS FILE FISIK
+                if (file_exists($filePath)) {
+                    unlink($filePath);
+                }
+            }
+        }
+
+        // 5. Baru hapus Grup dari Database
+        // (Database akan otomatis menghapus record di tabel items & pdf via Cascade)
         $this->grupModel->delete($id);
-        return redirect()->to('geospasial?tab=' . $tab)->with('success', 'Grup dihapus');
+
+        return redirect()->to('geospasial?tab=' . $tab)->with('success', 'Grup dan seluruh file PDF terkait berhasil dihapus.');
     }
 
     public function deletePdf($idPdf)

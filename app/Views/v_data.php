@@ -251,7 +251,22 @@
                                 <div class="col-6"><label class="small text-muted">Stroke</label><input type="color" name="color" id="style_color" class="form-control form-control-color w-100" value="#3388ff"></div>
                                 <div class="col-6"><label class="small text-muted">Fill</label><input type="color" name="fillColor" id="style_fillColor" class="form-control form-control-color w-100" value="#3388ff"></div>
                                 <div class="col-6"><label class="small text-muted">Weight</label><input type="number" name="weight" id="style_weight" class="form-control" value="3"></div>
-                                <div class="col-6"><label class="small text-muted">Tipe</label><select name="dashArray" id="style_dashArray" class="form-select"><option value="">Solid</option><option value="5,5">Dashed</option><option value="1,5">Dotted</option></select></div>
+                                <div class="col-12">
+                                        <label class="small text-muted fw-bold">Pola Garis (Dash Array)</label>
+                                        <div class="input-group input-group-sm">
+                                            <input type="text" name="dashArray" id="style_dashArray" class="form-control" placeholder="Contoh: 5, 10" title="Masukkan angka dipisah koma (garis, jarak)">
+                                            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">Presets</button>
+                                            <ul class="dropdown-menu dropdown-menu-end">
+                                                <li><a class="dropdown-item" href="javascript:void(0)" onclick="setDashPreset('')">Solid (Garis Utuh)</a></li>
+                                                <li><a class="dropdown-item" href="javascript:void(0)" onclick="setDashPreset('5, 5')">Dashed (Putus-putus)</a></li>
+                                                <li><a class="dropdown-item" href="javascript:void(0)" onclick="setDashPreset('1, 10')">Dotted (Titik-titik)</a></li>
+                                                <li><a class="dropdown-item" href="javascript:void(0)" onclick="setDashPreset('10, 5, 1, 5')">Dash-Dot</a></li>
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li><small class="dropdown-item text-muted" style="font-size: 10px;">Format: panjang_garis, jarak</small></li>
+                                            </ul>
+                                        </div>
+                                        <small class="text-muted" style="font-size: 0.7rem;">Gunakan format angka dipisah koma untuk custom pola.</small>
+                                    </div>
                                 <div class="col-6"><label class="small text-muted">Op. Stroke</label><input type="number" name="opacity" id="style_opacity" class="form-control" value="1" step="0.1" max="1"></div>
                                 <div class="col-6"><label class="small text-muted">Op. Fill</label><input type="number" name="fillOpacity" id="style_fillOpacity" class="form-control" value="0.2" step="0.1" max="1"></div>
                             </div>
@@ -400,18 +415,26 @@ function initStyleMap(style) {
     if (styleMap) styleMap.remove();
     styleMap = L.map('map_style_preview', { zoomControl: false }).setView(DEFAULT_COORD, 13);
     L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}').addTo(styleMap);
+    
     styleLayer = L.polygon([[DEFAULT_COORD[0]+0.01, DEFAULT_COORD[1]-0.01], [DEFAULT_COORD[0]-0.01, DEFAULT_COORD[1]+0.01], [DEFAULT_COORD[0]-0.01, DEFAULT_COORD[1]-0.02]], style).addTo(styleMap);
     styleMap.fitBounds(styleLayer.getBounds(), { padding: [10,10] });
 
-    ['style_color', 'style_weight', 'style_opacity', 'style_fillColor', 'style_fillOpacity', 'style_dashArray'].forEach(id => {
-        document.getElementById(id).addEventListener('input', () => {
+    // Daftar ID input yang akan dipantau perubahannya
+    const styleInputs = ['style_color', 'style_weight', 'style_opacity', 'style_fillColor', 'style_fillOpacity', 'style_dashArray'];
+    
+    styleInputs.forEach(id => {
+        const el = document.getElementById(id);
+        if(!el) return;
+
+        // Gunakan event 'input' agar perubahan teks langsung terlihat di peta tanpa nunggu blur/lose focus
+        el.addEventListener('input', () => {
             styleLayer.setStyle({
                 color: document.getElementById('style_color').value,
                 weight: document.getElementById('style_weight').value,
                 opacity: document.getElementById('style_opacity').value,
                 fillColor: document.getElementById('style_fillColor').value,
                 fillOpacity: document.getElementById('style_fillOpacity').value,
-                dashArray: document.getElementById('style_dashArray').value
+                dashArray: document.getElementById('style_dashArray').value // Mengambil string dari input teks
             });
         });
     });
@@ -509,5 +532,12 @@ function handleFileUpload(input) {
     const r = new FileReader();
     r.onload = e => { try { clearMapDraw(); loadGeoJSON(e.target.result); } catch(err){ alert('GeoJSON Tidak Valid'); } };
     r.readAsText(f); input.value = '';
+}
+
+function setDashPreset(val) {
+    const input = document.getElementById('style_dashArray');
+    input.value = val;
+    // Trigger event 'input' secara manual agar preview terupdate
+    input.dispatchEvent(new Event('input'));
 }
 </script>

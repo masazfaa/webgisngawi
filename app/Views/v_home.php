@@ -122,6 +122,40 @@
             #header-box { width: auto; max-width: 80%; }
             #coord-box { bottom: 30px; font-size: 0.75rem; width: 90%; justify-content: center; }
         }
+        /* 1. Hapus margin/padding bawaan Leaflet agar konten mentok ke tepi */
+        .leaflet-popup-content {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: auto !important;
+        }
+
+        /* 2. Style Wrapper Utama (Kotak Putih Luar) */
+        .professional-popup .leaflet-popup-content-wrapper {
+            background: #fff;
+            border-radius: 8px; /* Lengkungan sudut popup */
+            padding: 0;
+            overflow: hidden; /* Penting! Agar header warna tidak bocor keluar lengkungan */
+            box-shadow: 0 3px 14px rgba(0,0,0,0.4);
+        }
+
+        /* 3. Perbaiki Posisi & Warna Tombol Close (X) */
+        .professional-popup .leaflet-popup-close-button {
+            color: #ffffff !important; /* Ubah warna X jadi putih */
+            top: 12px !important;      /* Sesuaikan posisi vertikal */
+            right: 12px !important;    /* Sesuaikan posisi horizontal */
+            font-size: 18px !important;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3); /* Bayangan agar terbaca di warna cerah */
+            transition: all 0.2s;
+        }
+
+        .professional-popup .leaflet-popup-close-button:hover {
+            color: #f0f0f0 !important;
+        }
+
+        /* 4. Sesuaikan panah bawah (Tip) agar menyatu */
+        .professional-popup .leaflet-popup-tip {
+            background: #fff;
+        }
     </style>
 </head>
 
@@ -261,50 +295,116 @@
                         }
                     ?>
 
-                    // --- C. BUAT LAYER LEAFLET ---
-                    var layer_<?= $grup['id_dg'] ?> = L.geoJSON(dataGrup_<?= $grup['id_dg'] ?>, {
-                        
-                        // Style hanya berefek ke Polygon & Line (Point butuh pointToLayer khusus, nanti saja)
-                        style: style_<?= $grup['id_dg'] ?>,
-                        
-                        onEachFeature: function(feature, layer) {
-                            // Popup Modern
-                            var props = feature.properties;
-                            var content = `
-                                <div style="min-width:220px; font-family:sans-serif;">
-                                    <div style="background:${style_<?= $grup['id_dg'] ?>.color}; padding:8px 12px; border-radius:6px 6px 0 0; color:white;">
-                                        <h6 style="margin:0; font-weight:700; font-size:0.95rem;">${props.nama}</h6>
-                                    </div>
-                                    <div style="padding:10px;">
-                            `;
+                        // --- C. BUAT LAYER LEAFLET ---
+                        var layer_<?= $grup['id_dg'] ?> = L.geoJSON(dataGrup_<?= $grup['id_dg'] ?>, {
                             
+                            style: style_<?= $grup['id_dg'] ?>,
+                            
+                            onEachFeature: function(feature, layer) {
+                                var props = feature.properties;
+                                var layerColor = style_<?= $grup['id_dg'] ?>.color; // Ambil warna layer untuk header
+
+                                // 1. HEADER (Judul)
+                                var content = `
+                                <div style="font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; min-width: 280px; max-width: 320px;">
+                                    <div style="
+                                        background-color: ${layerColor}; 
+                                        color: #fff; 
+                                        padding: 12px 40px 12px 15px; /* Padding kanan 40px agar teks tidak nabrak tombol X */
+                                        display: flex; 
+                                        align-items: center; 
+                                        justify-content: space-between;">
+                                        
+                                        <h3 style="margin: 0; font-size: 15px; font-weight: 600; line-height: 1.4;">
+                                            ${props.nama || 'Tanpa Nama'}
+                                        </h3>
+                                    </div>
+                                    
+                                    <div style="
+                                        max-height: 250px; 
+                                        overflow-y: auto; 
+                                        background: #fff;">
+                            `;
+
+                            // 2. TABEL INFORMASI (Sama seperti sebelumnya)
                             if(props.info && props.info.length > 0) {
-                                content += `<table style="width:100%; font-size:0.85rem; border-collapse:collapse;">`;
+                                content += `<table style="width: 100%; border-collapse: collapse; font-size: 13px;">`;
                                 props.info.forEach((attr, idx) => {
-                                    var bg = idx % 2 === 0 ? '#f8f9fa' : 'white';
-                                    content += `<tr style="background:${bg}; border-bottom:1px solid #eee;">
-                                        <td style="padding:4px 8px; color:#666;">${attr.label}</td>
-                                        <td style="padding:4px 8px; font-weight:600; text-align:right;">${attr.value}</td>
-                                    </tr>`;
+                                    var bg = idx % 2 === 0 ? '#f9f9f9' : '#ffffff'; 
+                                    content += `
+                                        <tr style="background: ${bg}; border-bottom: 1px solid #eee;">
+                                            <td style="padding: 10px 15px; color: #666; width: 40%; vertical-align: top;">${attr.label}</td>
+                                            <td style="padding: 10px 15px; font-weight: 500; color: #333; text-align: right;">${attr.value}</td>
+                                        </tr>`;
                                 });
                                 content += `</table>`;
                             } else {
-                                content += `<p style="font-size:0.85rem; color:#888; text-align:center; margin:10px 0;">Tidak ada data atribut.</p>`;
+                                content += `<div style="padding: 20px; text-align: center; color: #999; font-style: italic; font-size: 12px;">Tidak ada atribut data.</div>`;
                             }
 
-                            if(props.pdf) {
+                            // 3. BAGIAN PDF (Sama seperti sebelumnya)
+                            if (props.daftar_pdf && props.daftar_pdf.length > 0) {
                                 content += `
-                                    <a href="<?= base_url('uploads/pdf/') ?>/${props.pdf}" target="_blank" 
-                                       style="display:block; margin-top:10px; background:#dc3545; color:white; text-align:center; padding:8px; border-radius:4px; text-decoration:none; font-size:0.85rem; font-weight:600; transition:0.2s;">
-                                       <i class="fa-solid fa-file-pdf"></i> Unduh Dokumen PDF
-                                    </a>`;
+                                    <div style="padding: 15px; background: #f8f9fa; border-top: 1px solid #e9ecef;">
+                                        <div style="font-size: 11px; font-weight: 700; color: #8898aa; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                            <i class="fa-solid fa-paperclip"></i> Dokumen Terkait
+                                        </div>
+                                `;
+                                
+                                props.daftar_pdf.forEach((doc) => {
+                                    var linkPdf = "<?= base_url('uploads/pdf/') ?>/" + doc.file_path;
+                                    
+                                    content += `
+                                        <a href="${linkPdf}" target="_blank" style="
+                                            display: flex; 
+                                            align-items: center; 
+                                            background: #fff; 
+                                            border: 1px solid #e0e0e0; 
+                                            padding: 10px; 
+                                            border-radius: 6px; 
+                                            text-decoration: none; 
+                                            color: #333; 
+                                            margin-bottom: 8px; 
+                                            transition: all 0.2s ease;
+                                            font-size: 12px;
+                                            box-shadow: 0 1px 2px rgba(0,0,0,0.05);"
+                                            onmouseover="this.style.borderColor='${layerColor}'; this.style.color='${layerColor}';"
+                                            onmouseout="this.style.borderColor='#e0e0e0'; this.style.color='#333';"
+                                        >
+                                            <div style="
+                                                width: 32px; 
+                                                height: 32px; 
+                                                background: #fff0f0; 
+                                                color: #d32f2f; 
+                                                display: flex; 
+                                                align-items: center; 
+                                                justify-content: center; 
+                                                border-radius: 4px; 
+                                                margin-right: 12px;">
+                                                <i class="fa-solid fa-file-pdf"></i>
+                                            </div>
+                                            <div style="flex: 1; min-width: 0;">
+                                                <div style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                                    ${doc.judul_pdf}
+                                                </div>
+                                                <div style="font-size: 10px; color: #888; margin-top:2px;">Klik untuk unduh</div>
+                                            </div>
+                                        </a>
+                                    `;
+                                });
+                                content += `</div>`; 
                             }
-                            content += `</div></div>`;
-                            
-                            layer.bindPopup(content);
+
+                            content += `</div></div>`; // Tutup Wrapper
+
+                            // --- PENTING: TAMBAHKAN className 'professional-popup' ---
+                            layer.bindPopup(content, { 
+                                maxWidth: 320,
+                                className: 'professional-popup' // <--- INI KUNCINYA
+                            });
                             searchGroup.addLayer(layer);
-                        }
-                    });
+                            }
+                        });
 
                     // --- D. PUSH KE PANEL LAYERS DENGAN GRUP TEPAT ---
                     overLayers.push({

@@ -1,5 +1,5 @@
-<?php
-if ($isi) {
-    echo view($isi);
-
-}
+<?php 
+                if ($isi) {
+                    echo view($isi);
+                }
+            ?>

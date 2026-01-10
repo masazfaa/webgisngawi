@@ -5,32 +5,40 @@ namespace App\Controllers;
 use App\Controllers\BaseController;
 use App\Models\GeospasialGrupModel;
 use App\Models\PoligonModel;
-use App\Models\GeospasialPdfModel; // 1. Load Model PDF
+use App\Models\GeospasialPdfModel;
 
 class GeospasialController extends BaseController
 {
     protected $grupModel;
     protected $poligonModel;
-    protected $pdfModel; // 2. Property PDF
+    protected $pdfModel;
 
     public function __construct()
     {
         $this->grupModel    = new GeospasialGrupModel();
         $this->poligonModel = new PoligonModel();
-        $this->pdfModel     = new GeospasialPdfModel(); // 3. Init PDF
+        $this->pdfModel     = new GeospasialPdfModel();
     }
 
     public function geospasial()
     {
+        // 1. Ambil Grup Poligon
         $grupPolygon = $this->grupModel->where('jenis_peta', 'Polygon')->findAll();
         
         foreach ($grupPolygon as &$grup) {
+            // 2. Ambil Item Poligon berdasarkan Grup
             $items = $this->poligonModel->where('id_dg', $grup['id_dg'])->findAll();
             
-            // 4. Ambil data PDF untuk setiap poligon
             foreach ($items as &$item) {
-                $pdf = $this->pdfModel->where('poligon_id', $item['id'])->first();
-                $item['pdf'] = $pdf ? $pdf['file_path'] : null;
+                // [PERUBAHAN 1] Mengambil SEMUA PDF (findAll), bukan cuma satu (first)
+                // Kita simpan ke key 'daftar_pdf' agar sesuai dengan JS di View
+                $pdfs = $this->pdfModel->where('poligon_id', $item['id'])->findAll();
+                
+                // Jika ingin menampilkan satu PDF utama di tabel (icon kecil), ambil yang pertama
+                $item['pdf'] = !empty($pdfs) ? $pdfs[0]['file_path'] : null;
+                
+                // List lengkap untuk Modal Edit & Popup
+                $item['daftar_pdf'] = $pdfs; 
             }
             
             $grup['items'] = $items;
@@ -38,7 +46,7 @@ class GeospasialController extends BaseController
 
         $data = [
             'title'       => 'Manajemen Poligon',
-            'isi'         => 'v_data', 
+            'isi'         => 'v_data', // Sesuaikan dengan nama view Anda
             'grupPolygon' => $grupPolygon,
         ];
 
@@ -77,12 +85,11 @@ class GeospasialController extends BaseController
 
     public function save($tipe)
     {
-        // Hanya support polygon dulu sesuai request
         if ($tipe !== 'polygon') return redirect()->back();
 
         $id = $this->request->getPost('id');
         
-        // Atribut JSON
+        // --- PROSES DATA ATRIBUT JSON ---
         $keys = $this->request->getPost('attr_key');
         $vals = $this->request->getPost('attr_val');
         $atributJson = [];
@@ -99,7 +106,7 @@ class GeospasialController extends BaseController
             'atribut_tambahan' => json_encode($atributJson),
         ];
 
-        // 5. Simpan Data Poligon
+        // --- SIMPAN POLIGON ---
         if ($id) {
             $this->poligonModel->update($id, $dataSimpan);
             $polyId = $id;
@@ -108,32 +115,50 @@ class GeospasialController extends BaseController
             $polyId = $this->poligonModel->getInsertID();
         }
 
-        // 6. PROSES UPLOAD PDF (LOADING PROCESS DI VIEW)
-        $filePdf = $this->request->getFile('file_pdf');
-        if ($filePdf && $filePdf->isValid() && !$filePdf->hasMoved()) {
-            $newName = $filePdf->getRandomName();
-            // Simpan ke folder public/uploads/pdf
-            $filePdf->move('uploads/pdf', $newName); 
+        // --- [PERUBAHAN 2] PROSES MULTIPLE UPLOAD PDF ---
+        // Menggunakan getFiles() untuk menangkap array file_pdf[]
+        $files = $this->request->getFiles();
 
-            // Cek data lama di DB
-            $existingPdf = $this->pdfModel->where('poligon_id', $polyId)->first();
-            
-            // Hapus file fisik lama jika ada (optional, good practice)
-            if ($existingPdf && file_exists('uploads/pdf/' . $existingPdf['file_path'])) {
-                unlink('uploads/pdf/' . $existingPdf['file_path']);
+        if ($files && isset($files['file_pdf'])) {
+            foreach ($files['file_pdf'] as $file) {
+                // Validasi setiap file
+                if ($file->isValid() && !$file->hasMoved()) {
+                    $newName = $file->getRandomName();
+                    $file->move('uploads/pdf', $newName);
+
+                    // Insert BARU (bukan update/timpa) karena relasinya One-to-Many
+                    $this->pdfModel->insert([
+                        'poligon_id' => $polyId,
+                        'judul_pdf'  => $file->getClientName(), // Nama asli file sebagai judul default
+                        'file_path'  => $newName
+                    ]);
+                }
             }
-
-            $pdfData = [
-                'poligon_id' => $polyId,
-                'judul_pdf'  => $this->request->getPost('nama_dg'),
-                'file_path'  => $newName
-            ];
-
-            if ($existingPdf) $this->pdfModel->update($existingPdf['id'], $pdfData);
-            else $this->pdfModel->save($pdfData);
         }
 
         return redirect()->to('geospasial')->with('success', 'Data berhasil disimpan');
+    }
+
+    // --- [PERUBAHAN 3] METHOD BARU: HAPUS SATUAN PDF VIA AJAX ---
+    // Dipanggil saat tombol silang (X) di modal diklik
+    public function deletePdf($idPdf)
+    {
+        $pdf = $this->pdfModel->find($idPdf);
+        
+        if ($pdf) {
+            // Hapus file fisik
+            $path = 'uploads/pdf/' . $pdf['file_path'];
+            if (file_exists($path)) {
+                unlink($path);
+            }
+            
+            // Hapus record database
+            $this->pdfModel->delete($idPdf);
+            
+            return $this->response->setJSON(['status' => 'success', 'message' => 'File berhasil dihapus']);
+        }
+        
+        return $this->response->setJSON(['status' => 'error', 'message' => 'File tidak ditemukan']);
     }
 
     public function deleteGrup($id)
@@ -144,12 +169,23 @@ class GeospasialController extends BaseController
 
     public function delete($tipe, $id)
     {
-        // Hapus PDF jika ada
+        // --- [PERUBAHAN 4] HAPUS SEMUA PDF TERKAIT ---
         if($tipe == 'polygon'){
-            $pdf = $this->pdfModel->where('poligon_id', $id)->first();
-            if ($pdf && file_exists('uploads/pdf/' . $pdf['file_path'])) {
-                unlink('uploads/pdf/' . $pdf['file_path']);
+            // Cari semua file PDF milik poligon ini
+            $pdfs = $this->pdfModel->where('poligon_id', $id)->findAll();
+            
+            if (!empty($pdfs)) {
+                foreach ($pdfs as $pdf) {
+                    $path = 'uploads/pdf/' . $pdf['file_path'];
+                    if (file_exists($path)) {
+                        unlink($path); // Hapus fisik file
+                    }
+                }
+                // Hapus data di tabel PDF (Biasanya otomatis jika ada Cascade Delete di DB, tapi aman dihapus manual)
+                $this->pdfModel->where('poligon_id', $id)->delete();
             }
+
+            // Hapus data poligon
             $this->poligonModel->delete($id);
         }
         return redirect()->to('geospasial');

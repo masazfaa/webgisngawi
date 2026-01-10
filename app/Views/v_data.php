@@ -166,13 +166,27 @@
                                                       } else { echo "-"; }
                                                   ?>
                                               </td>
-                                              <td class="text-center align-middle">
-                                                  <?php if(!empty($item['pdf'])): ?>
-                                                      <a href="<?= base_url('uploads/pdf/'.$item['pdf']) ?>" target="_blank" class="btn btn-sm btn-outline-danger btn-xs" title="Lihat PDF"><i class="fas fa-file-pdf"></i></a>
-                                                  <?php else: ?>
-                                                      <span class="text-muted small">-</span>
-                                                  <?php endif; ?>
-                                              </td>
+                                                    <td class="text-center align-middle">
+                                                        <?php if(!empty($item['daftar_pdf']) && is_array($item['daftar_pdf'])): ?>
+                                                            
+                                                            <div class="d-flex flex-wrap justify-content-center gap-1">
+                                                                
+                                                                <?php foreach($item['daftar_pdf'] as $pdf): ?>
+                                                                    <a href="<?= base_url('uploads/pdf/'.$pdf['file_path']) ?>" 
+                                                                    target="_blank" 
+                                                                    class="btn btn-sm btn-outline-danger btn-xs" 
+                                                                    title="<?= htmlspecialchars($pdf['judul_pdf']) ?>" 
+                                                                    data-bs-toggle="tooltip">
+                                                                        <i class="fas fa-file-pdf"></i>
+                                                                    </a>
+                                                                <?php endforeach; ?>
+
+                                                            </div>
+
+                                                        <?php else: ?>
+                                                            <span class="text-muted small">-</span>
+                                                        <?php endif; ?>
+                                                    </td>
                                               <td class="text-center align-middle">
                                                   <div class="btn-group" role="group">
                                                       <button class="btn btn-warning btn-xs text-white" onclick='openEditPolygon(<?= json_encode($item) ?>, <?= json_encode($grup) ?>)'><i class="fas fa-edit"></i></button>
@@ -275,11 +289,15 @@
                                 <input type="text" name="nama_dg" id="poly_nama" class="form-control" required>
                             </div>
                             
-                            <div class="mb-3 p-2 bg-light border rounded">
-                                <label class="small fw-bold mb-1"><i class="fas fa-file-pdf text-danger"></i> Upload PDF (Opsional)</label>
-                                <input type="file" name="file_pdf" id="poly_pdf" class="form-control form-control-sm" accept="application/pdf">
-                                <small id="pdf_status" class="text-muted d-block mt-1" style="font-size:0.75rem">Kosongkan jika tidak diubah.</small>
-                            </div>
+                                <div class="mb-3 p-3 bg-light border rounded">
+                                    <label class="small fw-bold mb-2"><i class="fas fa-file-pdf text-danger"></i> Dokumen PDF</label>
+                                    
+                                    <div id="existing_files_container" class="list-group mb-2"></div>
+
+                                    <label class="form-label small text-muted">Tambah File Baru:</label>
+                                    <input type="file" name="file_pdf[]" id="poly_pdf" class="form-control form-control-sm" accept="application/pdf" multiple>
+                                    <small class="text-muted" style="font-size:0.7rem">*Bisa pilih banyak file sekaligus. Tahan tombol Ctrl saat memilih.</small>
+                                </div>
                             
                             <hr>
                             <div class="d-flex justify-content-between align-items-center mb-2">
@@ -479,46 +497,121 @@ function deleteGrup(id) { if(confirm('Hapus grup ini?')) window.location.href = 
 function openAddPolygon(grupId, grupData) { preparePolygonModal(grupId, grupData); }
 function openEditPolygon(data, grupData) { preparePolygonModal(data.id_dg, grupData, data); }
 
+// ===========================================
+// UPDATE FUNGSI INI DI DALAM CODE ANDA
+// ===========================================
+
 function preparePolygonModal(grupId, grupData, data = null) {
     const modalEl = document.getElementById('modalDataPolygon');
     document.getElementById('formPolygonData').reset();
     document.getElementById('attribute_container').innerHTML = '';
     document.getElementById('poly_id_grup').value = grupId;
-    currentGroupStyle = { color: grupData.color, weight: grupData.weight, opacity: grupData.opacity, fillColor: grupData.fillColor, fillOpacity: grupData.fillOpacity, dashArray: grupData.dashArray };
+    
+    // Reset Container PDF Lama
+    const filesContainer = document.getElementById('existing_files_container');
+    filesContainer.innerHTML = ''; 
 
-    // Reset tombol simpan dari loading state
+    currentGroupStyle = { 
+        color: grupData.color, 
+        weight: grupData.weight, 
+        opacity: grupData.opacity, 
+        fillColor: grupData.fillColor, 
+        fillOpacity: grupData.fillOpacity, 
+        dashArray: grupData.dashArray 
+    };
+
+    // Reset tombol simpan
     const btnSimpan = document.getElementById('btnSimpanPoly');
     if(btnSimpan){
         btnSimpan.innerHTML = '<i class="fas fa-save"></i> Simpan Data';
         btnSimpan.classList.remove('btn-loading');
     }
 
-    const pdfStat = document.getElementById('pdf_status');
-
     if (data) {
-        // EDIT MODE
+        // --- MODE EDIT ---
         document.getElementById('poly_id').value = data.id;
         document.getElementById('poly_nama').value = data.nama_dg;
         document.getElementById('poly_geojson').value = data.data_geospasial;
         
-        // Status PDF
-        if(data.pdf) {
-            pdfStat.innerHTML = `<span class='text-success fw-bold'><i class='fas fa-check-circle'></i> File PDF tersedia.</span> Upload baru untuk mengganti.`;
+        // --- LOGIKA BARU: MENAMPILKAN LIST PDF ---
+        // Asumsi: data.daftar_pdf berisi array [{id: 1, judul_pdf: '...', file_path: '...'}]
+        // Data ini harus dikirim dari Controller melalui variabel $item
+        
+        if (data.daftar_pdf && data.daftar_pdf.length > 0) {
+            data.daftar_pdf.forEach(pdf => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center p-2';
+                itemDiv.id = `pdf-item-${pdf.id}`;
+                itemDiv.innerHTML = `
+                    <div class="d-flex align-items-center overflow-hidden">
+                        <i class="fas fa-file-pdf text-danger me-2"></i>
+                        <a href="<?= base_url('uploads/pdf/') ?>/${pdf.file_path}" target="_blank" class="text-decoration-none text-dark small text-truncate" style="max-width: 200px;" title="${pdf.judul_pdf}">
+                            ${pdf.judul_pdf}
+                        </a>
+                    </div>
+                    <button type="button" class="btn btn-xs btn-outline-danger ms-2" onclick="deletePdfItem(${pdf.id})" title="Hapus File Ini">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+                filesContainer.appendChild(itemDiv);
+            });
         } else {
-            pdfStat.textContent = "Belum ada file PDF.";
+            filesContainer.innerHTML = '<div class="text-muted small text-center fst-italic py-1 border rounded bg-white">Belum ada dokumen PDF.</div>';
         }
 
-        try { const a = JSON.parse(data.atribut_tambahan); if(Array.isArray(a)) a.forEach(x => addAttributeRow(x.label, x.value)); } catch(e){}
+        try { 
+            const a = JSON.parse(data.atribut_tambahan); 
+            if(Array.isArray(a)) a.forEach(x => addAttributeRow(x.label, x.value)); 
+        } catch(e){}
+
     } else {
-        // ADD MODE
+        // --- MODE TAMBAH ---
         document.getElementById('poly_id').value = '';
         document.getElementById('poly_geojson').value = '';
-        pdfStat.textContent = "Upload PDF (Opsional)";
-        try { const t = JSON.parse(grupData.atribut_default); if(Array.isArray(t) && t.length > 0) t.forEach(x => addAttributeRow(x.label, '')); else addAttributeRow(); } catch(e) { addAttributeRow(); }
+        filesContainer.innerHTML = ''; // Kosongkan list
+        
+        try { 
+            const t = JSON.parse(grupData.atribut_default); 
+            if(Array.isArray(t) && t.length > 0) t.forEach(x => addAttributeRow(x.label, '')); 
+            else addAttributeRow(); 
+        } catch(e) { addAttributeRow(); }
     }
 
     bootstrap.Modal.getOrCreateInstance(modalEl).show();
     modalEl.addEventListener('shown.bs.modal', () => setTimeout(() => initDrawMap(data ? data.data_geospasial : null), 200), { once: true });
+}
+
+// --- FUNGSI BARU: HAPUS PDF VIA AJAX ---
+function deletePdfItem(idPdf) {
+    if(!confirm('Apakah Anda yakin ingin menghapus file PDF ini secara permanen?')) return;
+
+    // Ganti URL sesuai route Anda
+    fetch(`<?= base_url('geospasial/deletePdf') ?>/${idPdf}`, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if(data.status === 'success') {
+            // Hapus elemen dari tampilan modal
+            const el = document.getElementById(`pdf-item-${idPdf}`);
+            if(el) el.remove();
+            
+            // Cek jika kosong, tampilkan placeholder
+            const container = document.getElementById('existing_files_container');
+            if(container.children.length === 0) {
+                container.innerHTML = '<div class="text-muted small text-center fst-italic py-1 border rounded bg-white">Belum ada dokumen PDF.</div>';
+            }
+        } else {
+            alert('Gagal menghapus: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Terjadi kesalahan saat menghapus file.');
+    });
 }
 
 function addAttributeRow(label = '', value = '') {

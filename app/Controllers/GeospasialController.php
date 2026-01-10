@@ -163,8 +163,33 @@ class GeospasialController extends BaseController
 
     public function deleteGrup($id)
     {
+        // 1. Cari semua poligon yang termasuk dalam grup ini
+        $poligons = $this->poligonModel->where('id_dg', $id)->findAll();
+
+        foreach ($poligons as $poly) {
+            // 2. Cari semua PDF milik poligon tersebut
+            $pdfs = $this->pdfModel->where('poligon_id', $poly['id'])->findAll();
+
+            foreach ($pdfs as $pdf) {
+                $path = 'uploads/pdf/' . $pdf['file_path'];
+                
+                // 3. Hapus file fisik dari folder public
+                if (file_exists($path)) {
+                    unlink($path);
+                }
+                
+                // 4. Hapus data di tabel PDF
+                $this->pdfModel->delete($pdf['id']);
+            }
+
+            // 5. Hapus data poligon (opsional jika sudah ada Cascade Delete di DB)
+            $this->poligonModel->delete($poly['id']);
+        }
+
+        // 6. Terakhir, hapus grupnya
         $this->grupModel->delete($id);
-        return redirect()->to('geospasial');
+
+        return redirect()->to('geospasial')->with('success', 'Grup dan seluruh file terkait berhasil dihapus');
     }
 
     public function delete($tipe, $id)

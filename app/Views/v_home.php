@@ -241,7 +241,7 @@
                 icon: '<i class="fa-solid fa-mountain text-secondary"></i>'
             }
         ];
-        map.addLayer(baseLayers[0].layer); // Default
+        map.addLayer(baseLayers[1].layer); // Default
 
         // --- 4. OVERLAY LAYERS (DATA POLIGON) ---
         var overLayers = [];

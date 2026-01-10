@@ -540,4 +540,25 @@ function setDashPreset(val) {
     // Trigger event 'input' secara manual agar preview terupdate
     input.dispatchEvent(new Event('input'));
 }
+
+// Tambahkan ini di bagian script
+document.getElementById('formPolygonData')?.addEventListener('submit', function(e) {
+    const btn = document.getElementById('btnSimpanPoly');
+    
+    // 1. Tambahkan class loading (dari CSS Anda)
+    btn.classList.add('btn-loading');
+    
+    // 2. Ubah teks tombol agar user tahu proses sedang berjalan
+    btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Menyimpan...`;
+    
+    // 3. (Opsional) Matikan tombol agar tidak diklik dua kali
+    btn.disabled = true;
+});
+
+document.querySelector('#modalGrup form')?.addEventListener('submit', function(e) {
+    const btn = this.querySelector('button[type="submit"]');
+    btn.classList.add('btn-loading');
+    btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Memproses...`;
+    btn.disabled = true;
+});
 </script>

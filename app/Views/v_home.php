@@ -171,12 +171,21 @@
            8. LABEL STYLE (TOOLTIP)
         ======================================================== */
         .polygon-label {
-            background: rgba(255, 255, 255, 0.9);
-            border: 1px solid rgba(0,0,0,0.1);
-            border-radius: 4px; padding: 2px 8px;
-            font-size: 11px; font-weight: 600; color: #333;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            white-space: nowrap; pointer-events: none;
+            background: transparent; /* Membuat background transparan */
+            border: none;             /* Menghapus border kotak jika tidak diperlukan */
+            padding: 2px 8px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #ffffff;           /* Warna font putih */
+            white-space: nowrap;
+            pointer-events: none;
+            
+            /* Membuat efek stroke hitam pada teks */
+            text-shadow: 
+                -1px -1px 0 #000,  
+                1px -1px 0 #000,
+                -1px  1px 0 #000,
+                1px  1px 0 #000;
         }
         .leaflet-tooltip-top:before, .leaflet-tooltip-bottom:before, .leaflet-tooltip-left:before, .leaflet-tooltip-right:before {
             display: none !important;

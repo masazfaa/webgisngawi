@@ -22,4 +22,7 @@ $routes->group('geospasial', function($routes) {
     // --- MANAJEMEN FILE PDF ---
     // Route untuk hapus file PDF satuan via AJAX dari modal edit
     $routes->post('deletePdf/(:num)', 'GeospasialController::deletePdf/$1');
-});
+    // Route untuk Proses Import GeoJSON (Modal Import Baru)
+    $routes->post('importGeoJSONGrup', 'GeospasialController::importGeoJSONGrup');
+    $routes->get('getPolygonDetail/(:num)', 'GeospasialController::getPolygonDetail/$1');
+    });

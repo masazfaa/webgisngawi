@@ -22,23 +22,26 @@ class GeospasialController extends BaseController
 
     public function geospasial()
     {
-        // 1. Ambil Grup Poligon
+        // 1. Ambil Grup Poligon (Semua kolom gapapa karena grup biasanya sedikit)
         $grupPolygon = $this->grupModel->where('jenis_peta', 'Polygon')->findAll();
         
         foreach ($grupPolygon as &$grup) {
-            // 2. Ambil Item Poligon berdasarkan Grup
-            $items = $this->poligonModel->where('id_dg', $grup['id_dg'])->findAll();
+            // 2. [OPTIMASI] Hanya ambil kolom yang dibutuhin buat TABEL. 
+            // JANGAN ambil 'data_geospasial' di sini karena berat.
+            $items = $this->poligonModel
+                        ->select('id, id_dg, nama_dg, atribut_tambahan') // Sebutkan kolomnya
+                        ->where('id_dg', $grup['id_dg'])
+                        ->findAll();
             
             foreach ($items as &$item) {
-                // [PERUBAHAN 1] Mengambil SEMUA PDF (findAll), bukan cuma satu (first)
-                // Kita simpan ke key 'daftar_pdf' agar sesuai dengan JS di View
+                // 3. Ambil PDF (Tetap findAll tapi pastikan tabel pdf kolomnya ga ada yang bloat)
                 $pdfs = $this->pdfModel->where('poligon_id', $item['id'])->findAll();
                 
-                // Jika ingin menampilkan satu PDF utama di tabel (icon kecil), ambil yang pertama
                 $item['pdf'] = !empty($pdfs) ? $pdfs[0]['file_path'] : null;
-                
-                // List lengkap untuk Modal Edit & Popup
                 $item['daftar_pdf'] = $pdfs; 
+                
+                // Tambahkan placeholder kosong agar JS tidak error saat cari key ini
+                $item['data_geospasial'] = null; 
             }
             
             $grup['items'] = $items;
@@ -46,11 +49,17 @@ class GeospasialController extends BaseController
 
         $data = [
             'title'       => 'Manajemen Poligon',
-            'isi'         => 'v_data', // Sesuaikan dengan nama view Anda
+            'isi'         => 'v_data',
             'grupPolygon' => $grupPolygon,
         ];
 
         return view('template/v_wrapper', $data);
+    }
+
+    public function getPolygonDetail($id)
+    {
+        $data = $this->poligonModel->find($id);
+        return $this->response->setJSON($data);
     }
 
     public function saveGrup()
@@ -214,5 +223,75 @@ class GeospasialController extends BaseController
             $this->poligonModel->delete($id);
         }
         return redirect()->to('geospasial');
+    }
+
+    public function importGeoJSONGrup()
+    {
+        // 1. Matikan batasan waktu & memori (Biar kuat hajar ribuan data)
+        set_time_limit(0);
+        ini_set('memory_limit', '-1');
+
+        $file = $this->request->getFile('file_geojson');
+        $namaGrup = $this->request->getPost('nama_grup');
+
+        if ($file && $file->isValid() && !$file->hasMoved()) {
+            // Baca isi file
+            $jsonContent = file_get_contents($file->getTempName());
+            $geoArray = json_decode($jsonContent, true);
+
+            if (!$geoArray || !isset($geoArray['features'])) {
+                return $this->response->setJSON(['status' => 'error', 'message' => 'Format GeoJSON tidak valid atau features kosong!']);
+            }
+
+            // 2. Simpan Grup Baru (Header)
+            $dataGrup = [
+                'nama_grup'   => $namaGrup,
+                'jenis_peta'  => 'Polygon',
+                'color'       => $this->request->getPost('color'),
+                'weight'      => $this->request->getPost('weight'),
+                'opacity'     => $this->request->getPost('opacity'),
+                'fillColor'   => $this->request->getPost('fillColor'),
+                'fillOpacity' => $this->request->getPost('fillOpacity'),
+                'dashArray'   => $this->request->getPost('dashArray') ?: null,
+            ];
+            
+            $this->grupModel->insert($dataGrup);
+            $idGrup = $this->grupModel->getInsertID();
+
+            // 3. Loop Features untuk persiapan Insert Batch
+            $batchPoligon = [];
+            foreach ($geoArray['features'] as $feature) {
+                $props = $feature['properties'] ?? [];
+                
+                // Cari nama lokasi otomatis (priority: nama, NAME, atau Label)
+                $namaDg = $props['nama'] ?? $props['NAME'] ?? $props['Name'] ?? $props['label'] ?? 'Poligon Tanpa Nama';
+
+                // Masukkan SEMUA properti GeoJSON ke kolom atribut_tambahan otomatis
+                $atributJson = [];
+                foreach ($props as $key => $val) {
+                    $atributJson[] = ['label' => $key, 'value' => $val];
+                }
+
+                $batchPoligon[] = [
+                    'id_dg'            => $idGrup,
+                    'nama_dg'          => $namaDg,
+                    'data_geospasial'  => json_encode($feature), // Simpan GeoJSON per feature
+                    'atribut_tambahan' => json_encode($atributJson),
+                ];
+            }
+
+            // 4. Eksekusi Batch Insert (Jauh lebih cepat daripada loop insert biasa)
+            if (!empty($batchPoligon)) {
+                $this->poligonModel->insertBatch($batchPoligon);
+            }
+
+            return $this->response->setJSON([
+                'status'  => 'success', 
+                'count'   => count($batchPoligon),
+                'message' => 'Berhasil mengimpor ' . count($batchPoligon) . ' data poligon.'
+            ]);
+        }
+
+        return $this->response->setJSON(['status' => 'error', 'message' => 'Gagal mengupload file!']);
     }
 }

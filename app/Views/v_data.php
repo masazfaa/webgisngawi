@@ -123,6 +123,9 @@
                     <button class="btn btn-primary px-4 fw-bold" onclick="openGrupModal()" style="background: var(--primary); border:none;">
                         <i class="fas fa-layer-group me-2"></i>Grup Baru
                     </button>
+                    <button class="btn btn-outline-primary px-4 fw-bold ms-2" onclick="openImportGrupModal()">
+                        <i class="fas fa-file-import me-2"></i>Import GeoJSON Grup
+                    </button>
                 </div>
                 <div class="col-auto">
                     <div class="input-group" style="width: 300px;">
@@ -195,7 +198,10 @@
                                                 </div>
                                             </td>
                                             <td class="text-center">
-                                                <button class="btn btn-xs btn-light border text-warning" onclick='openEditPolygon(<?= json_encode($item) ?>, <?= json_encode($grup) ?>)'><i class="fas fa-edit"></i></button>
+                                                <button class="btn btn-xs btn-light border text-warning" 
+                                                        onclick='openEditPolygon(<?= json_encode(['id' => $item['id']]) ?>, <?= json_encode($grup) ?>, this)'>
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
                                                 <button class="btn btn-xs btn-light border text-danger" onclick="deleteData('polygon', <?= $item['id'] ?>)"><i class="fas fa-trash"></i></button>
                                             </td>
                                         </tr>
@@ -336,6 +342,71 @@
                 </div>
                 <div class="modal-footer bg-light">
                     <button type="submit" id="btnSimpanPoly" class="btn btn-primary px-5 fw-bold"><i class="fas fa-save me-2"></i>Simpan Data</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalImportGrup" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content border-0 shadow">
+            <form id="formImportGrup" enctype="multipart/form-data">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title fw-bold">Import Grup dari GeoJSON</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="row">
+                        <div class="col-md-4 border-end">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small">Nama Grup Baru</label>
+                                <input type="text" name="nama_grup" class="form-control" required placeholder="Contoh: Batas Administrasi RT">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small">Pilih File GeoJSON</label>
+                                <input type="file" name="file_geojson" class="form-control" accept=".json,.geojson" required>
+                            </div>
+                            <div id="importProgressContainer" class="d-none mt-4 p-3 border rounded bg-light">
+                                <label class="small fw-bold mb-1 d-block text-primary"><i class="fas fa-spinner fa-spin me-1"></i> Memproses Data...</label>
+                                <div class="progress" style="height: 15px;">
+                                    <div id="importProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%">0%</div>
+                                </div>
+                                <small id="importStatusText" class="text-muted mt-2 d-block" style="font-size: 0.7rem;">Menunggu...</small>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 border-end">
+                            <h6 class="fw-bold mb-3 small">Visualisasi Peta</h6>
+                            <div class="row g-3">
+                                <div class="col-6"><label class="small text-muted">Stroke</label><input type="color" name="color" id="import_style_color" class="form-control form-control-color w-100" value="#4f46e5"></div>
+                                <div class="col-6"><label class="small text-muted">Fill</label><input type="color" name="fillColor" id="import_style_fillColor" class="form-control form-control-color w-100" value="#4f46e5"></div>
+                                <div class="col-6"><label class="small text-muted">Weight</label><input type="number" name="weight" id="import_style_weight" class="form-control" value="2"></div>
+                                <div class="col-12">
+                                    <label class="small text-muted fw-bold">Pola Garis</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="text" name="dashArray" id="import_style_dashArray" class="form-control" placeholder="Contoh: 5, 10">
+                                        <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">Presets</button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item" href="javascript:void(0)" onclick="setImportDashPreset('')">Solid</a></li>
+                                            <li><a class="dropdown-item" href="javascript:void(0)" onclick="setImportDashPreset('5, 5')">Dashed</a></li>
+                                            <li><a class="dropdown-item" href="javascript:void(0)" onclick="setImportDashPreset('1, 10')">Dotted</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="col-6"><label class="small text-muted">Op. Stroke</label><input type="number" name="opacity" id="import_style_opacity" class="form-control" value="1" step="0.1" max="1"></div>
+                                <div class="col-6"><label class="small text-muted">Op. Fill</label><input type="number" name="fillOpacity" id="import_style_fillOpacity" class="form-control" value="0.2" step="0.1" max="1"></div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="fw-bold small mb-3">Preview</label>
+                            <div id="map_import_preview" style="height: 250px; width: 100%; border-radius: 12px; border: 2px solid var(--slate-100);"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="submit" id="btnSubmitImport" class="btn btn-primary px-5 fw-bold"><i class="fas fa-cloud-upload-alt me-2"></i>Mulai Import</button>
                 </div>
             </form>
         </div>
@@ -499,6 +570,7 @@ function initDrawMap(jsonStr) {
 }
 
 function addMarker(latlng) {
+    if (!latlng) return;
     const m = L.marker(latlng, { draggable: true }).addTo(drawMap);
     m.on('drag', updatePoly);
     m.on('click', () => { drawMap.removeLayer(m); markers = markers.filter(x => x !== m); updatePoly(); });
@@ -517,11 +589,56 @@ function updatePoly() {
 function clearMapDraw() { markers.forEach(m => drawMap.removeLayer(m)); markers = []; if(drawLayer) drawMap.removeLayer(drawLayer); document.getElementById('poly_geojson').value = ''; }
 
 function loadGeoJSON(str) {
-    const l = L.geoJSON(JSON.parse(str));
-    const first = l.getLayers()[0];
-    if(first && first instanceof L.Polygon) {
-        let coords = first.getLatLngs(); if(Array.isArray(coords[0])) coords = coords[0];
-        coords.forEach(c => addMarker(c)); drawMap.fitBounds(first.getBounds());
+    if (!str || str === "null" || str === "") return;
+
+    try {
+        const geojsonData = JSON.parse(str);
+        const l = L.geoJSON(geojsonData);
+        
+        // Bersihkan marker lama sebelum memproses yang baru
+        markers.forEach(m => drawMap.removeLayer(m));
+        markers = [];
+
+        // Ambil semua layer yang berhasil di-parse oleh Leaflet
+        const allLayers = l.getLayers();
+        
+        if (allLayers.length > 0) {
+            // Kita fokus pada layer pertama hasil parse
+            const firstLayer = allLayers[0];
+            let coords = [];
+
+            // LOGIKA EKSTRAKSI KOORDINAT YANG LEBIH KUAT
+            if (typeof firstLayer.getLatLngs === 'function') {
+                let latlngs = firstLayer.getLatLngs();
+                
+                // GeoJSON Polygon biasanya punya struktur array bertingkat: [[ [lat,lng], [lat,lng] ]]
+                // Kita harus "meratakan" array-nya sampai ketemu objek LatLng
+                while (Array.isArray(latlngs) && latlngs.length > 0 && Array.isArray(latlngs[0])) {
+                    latlngs = latlngs[0];
+                }
+                coords = latlngs;
+            } else if (typeof firstLayer.getLatLng === 'function') {
+                // Jika ternyata itu Point/Marker
+                coords = [firstLayer.getLatLng()];
+            }
+
+            // PROSES PEMBUATAN MARKER (TITIK EDIT)
+            if (Array.isArray(coords)) {
+                coords.forEach(c => {
+                    // Validasi: Pastikan 'c' adalah objek koordinat yang valid sebelum addMarker
+                    if (c && typeof c === 'object' && ( (c.lat && c.lng) || (Array.isArray(c) && c.length >= 2) )) {
+                        addMarker(c);
+                    }
+                });
+
+                // Zoom ke lokasi data agar terlihat
+                if (markers.length > 0) {
+                    drawMap.fitBounds(l.getBounds(), { padding: [30, 30] });
+                }
+            }
+        }
+    } catch (e) {
+        console.error("GeoJSON Parse Error:", e);
     }
 }
 
@@ -561,4 +678,124 @@ document.querySelector('#modalGrup form')?.addEventListener('submit', function(e
     btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Memproses...`;
     btn.disabled = true;
 });
+
+// Deklarasi global agar tidak undefined
+let importStyleMap, importStyleLayer;
+
+function openImportGrupModal() {
+    const modalEl = document.getElementById('modalImportGrup');
+    const modal = new bootstrap.Modal(modalEl);
+    
+    document.getElementById('formImportGrup').reset();
+    document.getElementById('importProgressContainer').classList.add('d-none');
+    
+    modal.show();
+
+    // Jalankan preview peta saat modal terbuka
+    modalEl.addEventListener('shown.bs.modal', function () {
+        const initialStyle = {
+            color: '#4f46e5', weight: 2, opacity: 1,
+            fillColor: '#4f46e5', fillOpacity: 0.2, dashArray: ''
+        };
+        initImportStyleMap(initialStyle); 
+    }, { once: true });
+}
+
+function initImportStyleMap(style) {
+    if (importStyleMap) importStyleMap.remove();
+    
+    importStyleMap = L.map('map_import_preview', { zoomControl: false, attributionControl: false }).setView(DEFAULT_COORD, 13);
+    L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}').addTo(importStyleMap);
+    
+    // Gunakan segitiga sederhana untuk preview
+    importStyleLayer = L.polygon([
+        [DEFAULT_COORD[0] + 0.005, DEFAULT_COORD[1] - 0.005],
+        [DEFAULT_COORD[0] - 0.005, DEFAULT_COORD[1] + 0.005],
+        [DEFAULT_COORD[0] - 0.005, DEFAULT_COORD[1] - 0.005]
+    ], style).addTo(importStyleMap);
+    
+    importStyleMap.fitBounds(importStyleLayer.getBounds(), { padding: [20, 20] });
+
+    // Listener Input (Tiru cara kamu)
+    const ids = ['import_style_color', 'import_style_weight', 'import_style_opacity', 'import_style_fillColor', 'import_style_fillOpacity', 'import_style_dashArray'];
+    ids.forEach(id => {
+        document.getElementById(id)?.addEventListener('input', () => {
+            importStyleLayer.setStyle({
+                color: document.getElementById('import_style_color').value,
+                weight: document.getElementById('import_style_weight').value,
+                opacity: document.getElementById('import_style_opacity').value,
+                fillColor: document.getElementById('import_style_fillColor').value,
+                fillOpacity: document.getElementById('import_style_fillOpacity').value,
+                dashArray: document.getElementById('import_style_dashArray').value
+            });
+        });
+    });
+}
+
+function setImportDashPreset(val) {
+    const el = document.getElementById('import_style_dashArray');
+    el.value = val;
+    el.dispatchEvent(new Event('input'));
+}
+
+// Handler AJAX Upload dengan Progress Bar
+document.getElementById('formImportGrup')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btnSubmitImport');
+    const progressCont = document.getElementById('importProgressContainer');
+    const progressBar = document.getElementById('importProgressBar');
+    const statusText = document.getElementById('importStatusText');
+
+    btn.disabled = true;
+    progressCont.classList.remove('d-none');
+
+    const xhr = new XMLHttpRequest();
+    xhr.upload.addEventListener('progress', function(e) {
+        if (e.lengthComputable) {
+            const percent = Math.round((e.loaded / e.total) * 100);
+            progressBar.style.width = percent + '%';
+            progressBar.innerHTML = percent + '%';
+            statusText.innerText = percent < 100 ? 'Mengunggah file...' : 'Memproses database (Jangan tutup halaman)...';
+        }
+    });
+
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4 && xhr.status === 200) {
+            const res = JSON.parse(xhr.responseText);
+            if(res.status === 'success') {
+                alert('Berhasil mengimpor ' + res.count + ' poligon!');
+                window.location.reload();
+            } else {
+                alert('Gagal: ' + res.message);
+                btn.disabled = false;
+            }
+        }
+    };
+
+    xhr.open('POST', '<?= base_url('geospasial/importGeoJSONGrup') ?>', true);
+    xhr.send(new FormData(this));
+});
+
+async function openEditPolygon(item, grupData, btn) {
+    // 1. Beri proteksi agar tidak klik ganda saat loading
+    if(btn) btn.style.pointerEvents = 'none';
+    
+    try {
+        const response = await fetch(`<?= base_url('geospasial/getPolygonDetail') ?>/${item.id}`);
+        const fullData = await response.json();
+        
+        // 2. Cek apakah data_geospasial benar-benar ada isinya dari database
+        if (!fullData.data_geospasial) {
+            console.error("Data geospasial kosong di database!");
+            return;
+        }
+
+        // 3. Jalankan modal
+        preparePolygonModal(fullData.id_dg, grupData, fullData);
+    } catch (error) {
+        console.error("Fetch error:", error);
+    } finally {
+        if(btn) btn.style.pointerEvents = 'auto';
+    }
+}
 </script>

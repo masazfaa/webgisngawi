@@ -156,12 +156,26 @@
                                     <button class="btn btn-sm btn-light border" onclick='openGrupModal(<?= json_encode($grup) ?>)'><i class="fas fa-palette me-1"></i> Style</button>
                                     <button class="btn btn-sm btn-light border text-danger" onclick="deleteGrup(<?= $grup['id_dg'] ?>)"><i class="fas fa-trash"></i></button>
                                 </div>
-                                <div class="d-flex gap-2">
-                                    <input type="text" class="form-control form-control-sm search-in-group" placeholder="Cari nama..." style="width: 150px;">
-                                    <button class="btn btn-sm btn-success px-3" onclick='openAddPolygon(<?= $grup["id_dg"] ?>, <?= json_encode($grup) ?>)'>
-                                        <i class="fas fa-plus me-1"></i>Tambah
-                                    </button>
-                                </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="position-relative">
+                                            <i class="fas fa-search position-absolute text-muted" style="left: 10px; top: 50%; transform: translateY(-50%); font-size: 0.8rem;"></i>
+                                            <input type="text" class="form-control form-control-sm search-in-group" 
+                                                placeholder="Cari..." 
+                                                style="width: 140px; padding-left: 30px; border-radius: 6px;">
+                                        </div>
+
+                                        <button class="btn btn-sm btn-outline-dark shadow-sm px-2" 
+                                                onclick="doExportAJAX(<?= $grup['id_dg'] ?>, '<?= $grup['nama_grup'] ?>', this)"
+                                                title="Export ke GeoJSON">
+                                            <i class="fas fa-file-export text-success"></i>
+                                        </button>
+
+                                        <button class="btn btn-sm btn-primary shadow-sm px-3 d-flex align-items-center" 
+                                                onclick='openAddPolygon(<?= $grup["id_dg"] ?>, <?= json_encode($grup) ?>)'
+                                                style="border-radius: 6px; font-weight: 500;">
+                                            <i class="fas fa-plus-circle me-1"></i> Tambah
+                                        </button>
+                                    </div>
                             </div>
 
                             <div class="table-responsive">
@@ -882,4 +896,5 @@ function analyzeGeoJSON(input) {
     };
     reader.readAsText(file);
 }
+
 </script>

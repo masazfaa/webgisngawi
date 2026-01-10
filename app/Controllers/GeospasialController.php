@@ -29,6 +29,11 @@ public function geospasial()
                       ->select('id, id_dg, nama_dg, atribut_tambahan')
                       ->where('id_dg', $grup['id_dg'])
                       ->findAll();
+
+        // Kita ambil data_geospasial juga agar bisa di-export langsung
+        $grup['items'] = $this->poligonModel
+                              ->where('id_dg', $grup['id_dg'])
+                              ->findAll();
         
         foreach ($items as &$item) {
             // Default gunakan nama asli yang diinput/diimport awal

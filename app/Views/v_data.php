@@ -974,21 +974,17 @@ function openGrupModal(data = null, type = 'Polygon') {
     const modalEl = document.getElementById('modalGrup');
     const form = modalEl.querySelector('form');
     
-    // Reset Form
+    // 1. Reset Form & State
     form.reset();
     document.getElementById('template_container').innerHTML = '';
-    tempIconUrl = null;
+    tempIconUrl = null; 
 
-    // Set Tipe & ID
+    // 2. Set Tipe Peta & ID
     currentGrupType = (data && data.jenis_peta) ? data.jenis_peta : type;
     document.getElementById('grup_jenis_peta').value = currentGrupType;
     document.getElementById('grup_id').value = data ? data.id_dg : '';
-    if(data) document.getElementById('grup_nama').value = data.nama_grup;
-
-    // Toggle Input UI (Fungsi Helper)
-    toggleMarkerOptions(); 
-
-    // Default Style
+    
+    // 3. Inisialisasi Default Style Object
     let style = { 
         color: '#3388ff', weight: 3, opacity: 1, 
         fillColor: '#3388ff', fillOpacity: 0.2, 
@@ -996,48 +992,55 @@ function openGrupModal(data = null, type = 'Polygon') {
         marker_type: 'circle', marker_icon: ''
     };
 
-    // Override jika Edit Data
+    // 4. Jika Edit (Data ada), Timpa Style & Atur Form
     if(data) {
+        document.getElementById('grup_nama').value = data.nama_grup;
+        
+        // Update object style dari database
         style.color = data.color;
         style.weight = data.weight;
         style.opacity = data.opacity;
         style.fillColor = data.fillColor;
         style.fillOpacity = data.fillOpacity;
         style.dashArray = data.dashArray;
-        style.radius = data.radius || 10;
         style.marker_type = data.marker_type || 'circle';
         style.marker_icon = data.marker_icon || '';
+
+        // Terapkan ke elemen input
+        document.getElementById('style_marker_type').value = style.marker_type;
         
+        if (style.marker_type === 'icon_url') {
+            document.getElementById('style_icon_url').value = style.marker_icon;
+        }
+
         // Load Template Atribut
-        try { JSON.parse(data.atribut_default).forEach(x => addTemplateRow(x.label)); } catch(e){}
+        try { 
+            const t = JSON.parse(data.atribut_default);
+            if(t) t.forEach(x => addTemplateRow(x.label)); 
+        } catch(e){}
     } else {
-        addTemplateRow(); // Default row
+        addTemplateRow();
     }
 
-    // Set Nilai Form
+    // 5. Terapkan Style Standard ke Form
     const fields = ['color', 'fillColor', 'weight', 'opacity', 'fillOpacity', 'dashArray'];
     fields.forEach(f => {
-        if(document.getElementById('style_' + f)) document.getElementById('style_' + f).value = style[f];
+        const el = document.getElementById('style_' + f);
+        if(el) el.value = style[f];
     });
 
-    // Set Nilai Marker Khusus
-    if(document.getElementById('style_marker_type')) {
-        document.getElementById('style_marker_type').value = style.marker_type;
-    }
-    if (style.marker_type === 'icon_url') {
-        document.getElementById('style_icon_url').value = style.marker_icon;
-    }
+    // --- BAGIAN KRUSIAL ---
+    // 6. Jalankan Toggle UI agar box opsi (URL/File) muncul sesuai marker_type database
+    toggleMarkerOptions(); 
 
-    // Tampilkan Modal
+    // 7. Tampilkan Modal
     bootstrap.Modal.getOrCreateInstance(modalEl).show();
 
-    // --- LOGIKA PEMISAH (ROUTER) ---
+    // 8. Render Map Preview
     modalEl.addEventListener('shown.bs.modal', () => {
         if (currentGrupType === 'Point') {
-            // Panggil Fungsi KHUSUS Marker
             initMarkerPreviewMap(style); 
         } else {
-            // Panggil Fungsi LAMA (Poly/Line)
             initStyleMap(style, currentGrupType);
         }
     }, { once: true });

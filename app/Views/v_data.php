@@ -720,9 +720,42 @@
 </div>
 
 <script>
-// --- KONFIGURASI PETA ---
+// --- KONFIGURASI PETA (GOOGLE SATELLITE) ---
 const DEFAULT_COORD = [-7.408019826354289, 111.4428818182571]; 
-let styleMap, styleLayer, drawMap, drawLayer, markers = [], currentGroupStyle = {};
+const GOOGLE_SAT_URL = 'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'; // URL Google Satellite
+
+let styleMap, styleLayer;
+let mapLine, drawLineLayer, lineMarkers = [];
+let mapPoint, drawPointLayer;
+let drawMap, drawLayer, markers = []; // Untuk Poligon
+let currentGroupStyle = {};
+let currentGrupType = 'Polygon'; 
+
+// --- TAMBAHAN DARI KODE ATAS ---
+let importStyleMap, importStyleLayer; // Variabel untuk preview import
+
+// Listener untuk efek Loading pada tombol Submit (UX Improvement)
+document.addEventListener('DOMContentLoaded', function() {
+    // Loading saat simpan Polygon
+    document.getElementById('formPolygonData')?.addEventListener('submit', function(e) {
+        const btn = document.getElementById('btnSimpanPoly');
+        if(btn) {
+            btn.classList.add('btn-loading');
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Menyimpan...`;
+            btn.disabled = true;
+        }
+    });
+
+    // Loading saat simpan Grup
+    document.querySelector('#modalGrup form')?.addEventListener('submit', function(e) {
+        const btn = this.querySelector('button[type="submit"]');
+        if(btn) {
+            btn.classList.add('btn-loading');
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Memproses...`;
+            btn.disabled = true;
+        }
+    });
+});
 
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', function () {
@@ -730,14 +763,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     tooltipTriggerList.map(t => new bootstrap.Tooltip(t));
 
-// Fungsi Search Universal
+    // Fungsi Search Universal
     function setupSearch(inputId, itemClass) {
         const input = document.getElementById(inputId);
         if(!input) return;
         
         input.addEventListener('keyup', function(e) {
             const term = e.target.value.toLowerCase();
-            // Cari accordion item di dalam pane yang aktif
             const paneId = input.closest('.tab-pane').id; 
             const items = document.querySelectorAll(`#${paneId} .grup-item`);
             
@@ -748,10 +780,10 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Daftarkan ke 3 Search Bar
-    setupSearch('searchGroupInput', '.grup-item');      // Polygon (ID lama)
+    setupSearch('searchGroupInput', '.grup-item');      // Polygon
     setupSearch('searchGroupInputLine', '.grup-item');  // Line
     setupSearch('searchGroupInputPoint', '.grup-item'); // Point
+});
 
     // In-Group Search
     document.addEventListener('keyup', function(e) {
@@ -768,100 +800,78 @@ document.addEventListener('DOMContentLoaded', function () {
             body.querySelector('.search-no-result').style.display = found ? 'none' : 'table-row';
         }
     });
-});
 
-// --- LOGIC GRUP ---
-// Variabel Global untuk menyimpan tipe saat ini agar preview real-time tahu harus gambar apa
-let currentGrupType = 'Polygon'; 
+// --- HELPER UMUM ---
+function deletePdfItem(id) {
+    if(!confirm('Hapus file ini?')) return;
+    fetch(`<?= base_url('geospasial/deletePdf') ?>/${id}`, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+    .then(r => r.json()).then(res => { if(res.status==='success') document.getElementById(`pdf-item-${id}`).remove(); });
+}
 
+function addAttrRow(type = 'polygon', label = '', value = '') {
+    let containerId = 'attribute_container'; 
+    if(type === 'line') containerId = 'line_attr_area';
+    if(type === 'point') containerId = 'point_attr_area';
+
+    const div = document.createElement('div');
+    div.className = 'input-group mb-2 shadow-sm';
+    div.innerHTML = `
+        <input type="text" name="attr_key[]" class="form-control form-control-sm" placeholder="Label" value="${label}" required>
+        <input type="text" name="attr_val[]" class="form-control form-control-sm" placeholder="Nilai" value="${value}">
+        <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.parentElement.remove()">&times;</button>
+    `;
+    const container = document.getElementById(containerId);
+    if(container) container.appendChild(div);
+}
+// Alias legacy
+function addAttributeRow(l, v) { addAttrRow('polygon', l, v); }
+
+function deleteGrup(id) { if(confirm('Hapus seluruh grup dan datanya?')) window.location.href = `<?= base_url('geospasial/deleteGrup') ?>/${id}`; }
+function deleteData(t, id) { if(confirm('Hapus entitas ini?')) window.location.href = `<?= base_url('geospasial/delete') ?>/${t}/${id}`; }
+
+// --- BAGIAN 1: LOGIKA GRUP & PREVIEW ---
 function openGrupModal(data = null, type = 'Polygon') {
     const modalEl = document.getElementById('modalGrup');
     const form = modalEl.querySelector('form');
     
-    // 1. Reset Form & Container
     form.reset();
     document.getElementById('template_container').innerHTML = '';
     
-    // 2. Set Tipe Peta ke Input Hidden & Variabel Global
-    document.getElementById('grup_jenis_peta').value = type;
-    currentGrupType = type; // Simpan tipe untuk dipakai di initStyleMap
+    // Set Tipe
+    currentGrupType = (data && data.jenis_peta) ? data.jenis_peta : type;
+    document.getElementById('grup_jenis_peta').value = currentGrupType;
 
-    // 3. Reset Dropdown Label
     const labelSelect = document.getElementById('style_label_column');
     labelSelect.innerHTML = '<option value="">-- Gunakan Nama Manual --</option>';
 
-    // 4. Default Style
-    let style = { 
-        color: '#3388ff', weight: 3, opacity: 1, 
-        fillColor: '#3388ff', fillOpacity: 0.2, 
-        dashArray: '', radius: 10 
-    };
+    let style = { color: '#3388ff', weight: 3, opacity: 1, fillColor: '#3388ff', fillOpacity: 0.2, dashArray: '', radius: 10 };
 
-    // 5. Isi Data jika Mode Edit
     if(data) {
         document.getElementById('grup_id').value = data.id_dg;
         document.getElementById('grup_nama').value = data.nama_grup;
-        // Pastikan tipe diambil dari data jika tersedia, atau dari parameter
-        currentGrupType = data.jenis_peta || type; 
-        document.getElementById('grup_jenis_peta').value = currentGrupType;
-
         style = { 
             color: data.color, weight: data.weight, opacity: data.opacity, 
             fillColor: data.fillColor, fillOpacity: data.fillOpacity, 
             dashArray: data.dashArray || '', radius: data.radius || 10
         };
         
-        // Load sampel atribut untuk dropdown label
-        if(data.items && data.items.length > 0) {
-            try {
-                const sampleAttrs = JSON.parse(data.items[0].atribut_tambahan);
-                sampleAttrs.forEach(attr => {
-                    const opt = document.createElement('option');
-                    opt.value = attr.label;
-                    let contoh = attr.value ? ` (Contoh: ${attr.value})` : '';
-                    opt.text = attr.label + contoh;
-                    if(data.label_column === attr.label) opt.selected = true;
-                    labelSelect.appendChild(opt);
-                });
-            } catch(e) {}
-        }
-
         try { JSON.parse(data.atribut_default).forEach(x => addTemplateRow(x.label)); } catch(e){}
     } else {
         document.getElementById('grup_id').value = '';
-        addTemplateRow(); // Row kosong default
+        addTemplateRow(); 
     }
 
-    // 6. Set Nilai ke Input Form Style
+    // Hide Style yang tidak perlu
+    const fillContainer = document.getElementById('style_fillColor').closest('.col-6');
+    const fillOpContainer = document.getElementById('style_fillOpacity').closest('.col-6');
+    fillContainer.style.display = (currentGrupType === 'Line') ? 'none' : 'block';
+    fillOpContainer.style.display = (currentGrupType === 'Line') ? 'none' : 'block';
+
     Object.keys(style).forEach(key => { 
         if(document.getElementById('style_'+key)) document.getElementById('style_'+key).value = style[key]; 
     });
 
-    // 7. Tampilkan Modal
     bootstrap.Modal.getOrCreateInstance(modalEl).show();
-    
-    // --- LOGIKA SEMBUNYIKAN STYLE YG TIDAK PERLU ---
-    // Kita ambil elemen parent (col-6) dari input tersebut
-    const fillContainer = document.getElementById('style_fillColor').closest('.col-6');
-    const fillOpContainer = document.getElementById('style_fillOpacity').closest('.col-6');
-    const dashContainer = document.getElementById('style_dashArray').closest('.col-12'); // Tetap ditampilkan untuk line/poly
-
-    // Reset dulu (tampilkan semua)
-    fillContainer.style.display = 'block';
-    fillOpContainer.style.display = 'block';
-
-    // Jika LINE, sembunyikan Fill Color & Fill Opacity
-    if (currentGrupType === 'Line') {
-        fillContainer.style.display = 'none';
-        fillOpContainer.style.display = 'none';
-    } 
-    // Jika POINT, kita sembunyikan Dash Array (opsional, karena titik jarang putus-putus)
-    else if (currentGrupType === 'Point') {
-        // Point butuh Fill & Stroke, tapi Dash Array jarang dipakai untuk marker
-        // dashContainer.style.display = 'none'; // Aktifkan jika ingin sembunyikan dash array untuk point
-    }
-
-    // Render peta
     modalEl.addEventListener('shown.bs.modal', () => initStyleMap(style, currentGrupType), { once: true });
 }
 
@@ -872,82 +882,47 @@ function addTemplateRow(val = '') {
     document.getElementById('template_container').appendChild(div);
 }
 
-// --- FUNGSI PREVIEW STYLE (INIT STYLE MAP) ---
 function initStyleMap(style, type) {
-    // Hapus map lama jika ada
-    if (styleMap) {
-        styleMap.off();
-        styleMap.remove();
-    }
-
-    // Inisialisasi Peta Baru
+    if (typeof styleMap !== 'undefined') { styleMap.remove(); }
     styleMap = L.map('map_style_preview', { zoomControl: false, attributionControl: false }).setView(DEFAULT_COORD, 13);
-    L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}').addTo(styleMap);
+    L.tileLayer(GOOGLE_SAT_URL).addTo(styleMap);
     
-    // Tentukan Geometri berdasarkan Tipe
     if (type === 'Line') {
-        // Gambar GARIS (Zig-zag)
-        const lineCoords = [
-            [DEFAULT_COORD[0], DEFAULT_COORD[1] - 0.02],
-            [DEFAULT_COORD[0] + 0.01, DEFAULT_COORD[1]],
-            [DEFAULT_COORD[0], DEFAULT_COORD[1] + 0.02]
-        ];
-        styleLayer = L.polyline(lineCoords, style).addTo(styleMap);
-        
+        const coords = [[DEFAULT_COORD[0], DEFAULT_COORD[1]-0.02], [DEFAULT_COORD[0]+0.01, DEFAULT_COORD[1]], [DEFAULT_COORD[0], DEFAULT_COORD[1]+0.02]];
+        styleLayer = L.polyline(coords, style).addTo(styleMap);
     } else if (type === 'Point') {
-        // Gambar TITIK (Circle Marker agar warna/radius terlihat)
-        // Kita pakai CircleMarker karena Marker biasa (Pin) tidak bisa diubah warnanya lewat CSS sederhana
-        styleLayer = L.circleMarker(DEFAULT_COORD, style).addTo(styleMap);
-        
+        styleLayer = L.circleMarker(DEFAULT_COORD, { ...style, radius: 10 }).addTo(styleMap);
     } else {
-        // Gambar POLIGON (Segitiga) - Default
-        const polyCoords = [
-            [DEFAULT_COORD[0] + 0.01, DEFAULT_COORD[1] - 0.01], 
-            [DEFAULT_COORD[0] - 0.01, DEFAULT_COORD[1] + 0.01], 
-            [DEFAULT_COORD[0] - 0.01, DEFAULT_COORD[1] - 0.02]
-        ];
-        styleLayer = L.polygon(polyCoords, style).addTo(styleMap);
+        const coords = [[DEFAULT_COORD[0]+0.01, DEFAULT_COORD[1]-0.01], [DEFAULT_COORD[0]-0.01, DEFAULT_COORD[1]+0.01], [DEFAULT_COORD[0]-0.01, DEFAULT_COORD[1]-0.02]];
+        styleLayer = L.polygon(coords, style).addTo(styleMap);
     }
+    if(type !== 'Point') styleMap.fitBounds(styleLayer.getBounds(), { padding: [20, 20] });
 
-    // Fit Bounds agar objek terlihat di tengah
-    if (type === 'Point') {
-        styleMap.setView(DEFAULT_COORD, 15);
-    } else {
-        styleMap.fitBounds(styleLayer.getBounds(), { padding: [20, 20] });
-    }
-
-    // --- LISTENER PERUBAHAN INPUT STYLE ---
-    // Agar saat user geser warna/tebal, peta langsung berubah realtime
-    const styleInputs = ['style_color', 'style_weight', 'style_opacity', 'style_fillColor', 'style_fillOpacity', 'style_dashArray'];
-    
-    styleInputs.forEach(id => {
-        const el = document.getElementById(id);
-        if(!el) return;
-
-        // Hapus listener lama (clone node hack) agar tidak double trigger
-        const newEl = el.cloneNode(true);
-        el.parentNode.replaceChild(newEl, el);
-
-        newEl.addEventListener('input', () => {
-            const newStyle = {
+    ['style_color', 'style_weight', 'style_opacity', 'style_fillColor', 'style_fillOpacity', 'style_dashArray'].forEach(id => {
+        document.getElementById(id).oninput = function() {
+            styleLayer.setStyle({
                 color: document.getElementById('style_color').value,
-                weight: parseInt(document.getElementById('style_weight').value),
-                opacity: parseFloat(document.getElementById('style_opacity').value),
+                weight: document.getElementById('style_weight').value,
+                opacity: document.getElementById('style_opacity').value,
                 fillColor: document.getElementById('style_fillColor').value,
-                fillOpacity: parseFloat(document.getElementById('style_fillOpacity').value),
-                dashArray: document.getElementById('style_dashArray').value,
-                radius: 10 // Default radius untuk point preview
-            };
-            
-            // Terapkan style baru ke layer
-            styleLayer.setStyle(newStyle);
-        });
+                fillOpacity: document.getElementById('style_fillOpacity').value,
+                dashArray: document.getElementById('style_dashArray').value
+            });
+        };
     });
 }
 
-// --- LOGIC EDITOR POLIGON ---
-function openAddPolygon(grupId, grupData) { preparePolygonModal(grupId, grupData); }
-function openEditPolygon(data, grupData) { preparePolygonModal(data.id_dg, grupData, data); }
+// --- BAGIAN 2: LOGIKA POLIGON ---
+function openAddPolygon(grupId, grupData) { 
+    preparePolygonModal(grupId, grupData); 
+}
+function openEditPolygon(item, grupData, btn) {
+    if(btn) btn.style.pointerEvents = 'none';
+    fetch(`<?= base_url('geospasial/getDetail/polygon') ?>/${item.id}`, { headers: { "X-Requested-With": "XMLHttpRequest" } })
+    .then(r => r.json())
+    .then(data => { preparePolygonModal(data.id_dg, grupData, data); })
+    .finally(() => { if(btn) btn.style.pointerEvents = 'auto'; });
+}
 
 function preparePolygonModal(grupId, grupData, data = null) {
     const modalEl = document.getElementById('modalDataPolygon');
@@ -975,52 +950,23 @@ function preparePolygonModal(grupId, grupData, data = null) {
         document.getElementById('poly_id').value = '';
         try { JSON.parse(grupData.atribut_default).forEach(x => addAttributeRow(x.label, '')); } catch(e){ addAttributeRow(); }
     }
-
     bootstrap.Modal.getOrCreateInstance(modalEl).show();
     modalEl.addEventListener('shown.bs.modal', () => initDrawMap(data ? data.data_geospasial : null), { once: true });
 }
 
-function deletePdfItem(id) {
-    if(!confirm('Hapus file ini?')) return;
-    fetch(`<?= base_url('geospasial/deletePdf') ?>/${id}`, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-    .then(r => r.json()).then(res => { if(res.status==='success') document.getElementById(`pdf-item-${id}`).remove(); });
-}
-
-function addAttributeRow(label = '', value = '') {
-    const div = document.createElement('div');
-    div.className = 'input-group mb-2 shadow-sm';
-    div.innerHTML = `<input type="text" name="attr_key[]" class="form-control form-control-sm" placeholder="Label" value="${label}" required><input type="text" name="attr_val[]" class="form-control form-control-sm" placeholder="Nilai" value="${value}"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.parentElement.remove()">&times;</button>`;
-    document.getElementById('attribute_container').appendChild(div);
-}
-
-// --- DRAWING ENGINE ---
 function initDrawMap(jsonStr) {
     if (drawMap) drawMap.remove();
     drawMap = L.map('map_draw_polygon').setView(DEFAULT_COORD, 14);
-    L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}').addTo(drawMap);
-    markers = []; drawLayer = null;
+    L.tileLayer(GOOGLE_SAT_URL).addTo(drawMap); // Menggunakan konstanta yang sudah ada
+    
+    markers = []; 
+    drawLayer = null;
+    
+    // Pisahkan logic load data agar lebih rapi
     if (jsonStr) loadGeoJSON(jsonStr);
+    
     drawMap.on('click', e => addMarker(e.latlng));
 }
-
-function addMarker(latlng) {
-    if (!latlng) return;
-    const m = L.marker(latlng, { draggable: true }).addTo(drawMap);
-    m.on('drag', updatePoly);
-    m.on('click', () => { drawMap.removeLayer(m); markers = markers.filter(x => x !== m); updatePoly(); });
-    markers.push(m); updatePoly();
-}
-
-function updatePoly() {
-    const pts = markers.map(m => m.getLatLng());
-    if (drawLayer) drawMap.removeLayer(drawLayer);
-    if (pts.length >= 3) {
-        drawLayer = L.polygon(pts, currentGroupStyle).addTo(drawMap);
-        document.getElementById('poly_geojson').value = JSON.stringify(drawLayer.toGeoJSON());
-    } else document.getElementById('poly_geojson').value = '';
-}
-
-function clearMapDraw() { markers.forEach(m => drawMap.removeLayer(m)); markers = []; if(drawLayer) drawMap.removeLayer(drawLayer); document.getElementById('poly_geojson').value = ''; }
 
 function loadGeoJSON(str) {
     if (!str || str === "null" || str === "") return;
@@ -1029,43 +975,34 @@ function loadGeoJSON(str) {
         const geojsonData = JSON.parse(str);
         const l = L.geoJSON(geojsonData);
         
-        // Bersihkan marker lama sebelum memproses yang baru
+        // Bersihkan marker lama
         markers.forEach(m => drawMap.removeLayer(m));
         markers = [];
 
-        // Ambil semua layer yang berhasil di-parse oleh Leaflet
         const allLayers = l.getLayers();
-        
         if (allLayers.length > 0) {
-            // Kita fokus pada layer pertama hasil parse
             const firstLayer = allLayers[0];
             let coords = [];
 
-            // LOGIKA EKSTRAKSI KOORDINAT YANG LEBIH KUAT
+            // Logic ekstraksi koordinat yang mampu menangani Nested Array GeoJSON
             if (typeof firstLayer.getLatLngs === 'function') {
                 let latlngs = firstLayer.getLatLngs();
-                
-                // GeoJSON Polygon biasanya punya struktur array bertingkat: [[ [lat,lng], [lat,lng] ]]
-                // Kita harus "meratakan" array-nya sampai ketemu objek LatLng
+                // Ratakan array sampai ketemu object LatLng (penting untuk MultiPolygon)
                 while (Array.isArray(latlngs) && latlngs.length > 0 && Array.isArray(latlngs[0])) {
                     latlngs = latlngs[0];
                 }
                 coords = latlngs;
             } else if (typeof firstLayer.getLatLng === 'function') {
-                // Jika ternyata itu Point/Marker
                 coords = [firstLayer.getLatLng()];
             }
 
-            // PROSES PEMBUATAN MARKER (TITIK EDIT)
+            // Render Marker Edit
             if (Array.isArray(coords)) {
                 coords.forEach(c => {
-                    // Validasi: Pastikan 'c' adalah objek koordinat yang valid sebelum addMarker
-                    if (c && typeof c === 'object' && ( (c.lat && c.lng) || (Array.isArray(c) && c.length >= 2) )) {
-                        addMarker(c);
-                    }
+                    if (c && typeof c === 'object') addMarker(c);
                 });
-
-                // Zoom ke lokasi data agar terlihat
+                
+                // Zoom ke area data
                 if (markers.length > 0) {
                     drawMap.fitBounds(l.getBounds(), { padding: [30, 30] });
                 }
@@ -1076,45 +1013,360 @@ function loadGeoJSON(str) {
     }
 }
 
-function deleteGrup(id) { if(confirm('Hapus seluruh grup dan datanya?')) window.location.href = `<?= base_url('geospasial/deleteGrup') ?>/${id}`; }
-function deleteData(t, id) { if(confirm('Hapus entitas ini?')) window.location.href = `<?= base_url('geospasial/delete') ?>/${t}/${id}`; }
+function addMarker(latlng) {
+    if (!latlng) return;
+    const m = L.marker(latlng, { draggable: true }).addTo(drawMap);
+    m.on('drag', updatePoly);
+    m.on('click', () => { 
+        drawMap.removeLayer(m); 
+        markers = markers.filter(x => x !== m); 
+        updatePoly(); 
+    });
+    markers.push(m); 
+    updatePoly();
+}
+
+function updatePoly() {
+    const pts = markers.map(m => m.getLatLng());
+    if (drawLayer) drawMap.removeLayer(drawLayer);
+    
+    if (pts.length >= 3) {
+        // Render polygon baru berdasarkan posisi marker
+        drawLayer = L.polygon(pts, currentGroupStyle).addTo(drawMap);
+        document.getElementById('poly_geojson').value = JSON.stringify(drawLayer.toGeoJSON());
+    } else {
+        document.getElementById('poly_geojson').value = '';
+    }
+}
+
+function clearMapDraw() { 
+    markers.forEach(m => drawMap.removeLayer(m)); 
+    markers = []; 
+    if(drawLayer) drawMap.removeLayer(drawLayer); 
+    document.getElementById('poly_geojson').value = ''; 
+}
+
+// --- BAGIAN 3: LOGIKA LINE (FIXED) ---
+
+function openAddLine(grupId, grupData) {
+    document.getElementById('line_id').value = '';
+    document.getElementById('line_id_grup').value = grupId;
+    document.getElementById('line_nama').value = '';
+    document.getElementById('line_geojson').value = '';
+    document.getElementById('line_pdf_list').innerHTML = '';
+    document.getElementById('line_attr_area').innerHTML = '';
+
+    // FIX: Load Template Atribut
+    try {
+        if(grupData.atribut_default) {
+            JSON.parse(grupData.atribut_default).forEach(x => addAttrRow('line', x.label, ''));
+        } else { addAttrRow('line'); }
+    } catch(e) { addAttrRow('line'); }
+
+    // Style
+    currentGroupStyle = { color: grupData.color, weight: grupData.weight, dashArray: grupData.dashArray };
+
+    var myModal = new bootstrap.Modal(document.getElementById('modalDataLine'));
+    myModal.show();
+    
+    // Resize map saat modal muncul
+    document.getElementById('modalDataLine').addEventListener('shown.bs.modal', function(){
+        initDrawLineMap(); // Panggil init map khusus line
+    }, {once:true});
+}
+
+function openEditLine(item, grupData) {
+    fetch('<?= base_url("geospasial/getDetail/line") ?>/' + item.id, { headers: { "X-Requested-With": "XMLHttpRequest" } })
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('line_id').value = data.id;
+        document.getElementById('line_id_grup').value = grupData.id_dg;
+        document.getElementById('line_nama').value = data.nama_dg;
+        
+        // Load PDF
+        const pdfContainer = document.getElementById('line_pdf_list');
+        pdfContainer.innerHTML = '';
+        if(data.daftar_pdf) {
+            data.daftar_pdf.forEach(pdf => {
+                pdfContainer.innerHTML += `<div class="d-flex justify-content-between align-items-center mb-1 border-bottom pb-1" id="pdf-item-${pdf.id}"><small>${pdf.judul_pdf}</small><button type="button" class="btn btn-xs text-danger" onclick="deletePdfItem(${pdf.id})">&times;</button></div>`;
+            });
+        }
+
+        // Load Atribut
+        document.getElementById('line_attr_area').innerHTML = '';
+        try { JSON.parse(data.atribut_tambahan).forEach(x => addAttrRow('line', x.label, x.value)); } catch(e) {}
+
+        // Set Style
+        currentGroupStyle = { color: grupData.color, weight: grupData.weight, dashArray: grupData.dashArray };
+
+        var myModal = new bootstrap.Modal(document.getElementById('modalDataLine'));
+        myModal.show();
+
+        document.getElementById('modalDataLine').addEventListener('shown.bs.modal', function(){
+            initDrawLineMap(data.data_geospasial); // Load Map dengan Data
+        }, {once:true});
+    });
+}
+
+// Map Engine Khusus Line (Google Sat)
+function initDrawLineMap(jsonStr = null) {
+    if (mapLine) mapLine.remove();
+    mapLine = L.map('map_draw_line').setView(DEFAULT_COORD, 13);
+    L.tileLayer(GOOGLE_SAT_URL).addTo(mapLine); // FIX: Google Sat
+
+    lineMarkers = [];
+    drawLineLayer = null;
+
+    if(jsonStr) {
+        try {
+            const geo = JSON.parse(jsonStr);
+            const layer = L.geoJSON(geo).getLayers()[0];
+            const latlngs = layer.getLatLngs();
+            latlngs.forEach(ll => addLineMarker(ll));
+            mapLine.fitBounds(layer.getBounds());
+        } catch(e){}
+    }
+
+    mapLine.on('click', function(e) { addLineMarker(e.latlng); });
+}
+
+function addLineMarker(latlng) {
+    var m = L.marker(latlng, {draggable: true}).addTo(mapLine);
+    lineMarkers.push(m);
+    updateLineGeoJSON();
+    
+    m.on('drag', updateLineGeoJSON);
+    m.on('click', function() { 
+        mapLine.removeLayer(this);
+        lineMarkers = lineMarkers.filter(item => item !== this);
+        updateLineGeoJSON();
+    });
+}
+
+function updateLineGeoJSON() {
+    if (drawLineLayer) mapLine.removeLayer(drawLineLayer);
+    var latlngs = lineMarkers.map(m => m.getLatLng());
+    if (latlngs.length > 1) {
+        drawLineLayer = L.polyline(latlngs, currentGroupStyle).addTo(mapLine);
+        document.getElementById('line_geojson').value = JSON.stringify(drawLineLayer.toGeoJSON());
+    } else {
+        document.getElementById('line_geojson').value = '';
+    }
+}
+
+
+// --- BAGIAN 4: LOGIKA POINT (FIXED) ---
+
+function openAddPoint(grupId, grupData) {
+    document.getElementById('point_id').value = '';
+    document.getElementById('point_id_grup').value = grupId;
+    document.getElementById('point_nama').value = '';
+    document.getElementById('point_geojson').value = '';
+    document.getElementById('point_pdf_list').innerHTML = '';
+    document.getElementById('point_attr_area').innerHTML = '';
+
+    // FIX: Load Template Atribut
+    try {
+        if(grupData.atribut_default) {
+            JSON.parse(grupData.atribut_default).forEach(x => addAttrRow('point', x.label, ''));
+        } else { addAttrRow('point'); }
+    } catch(e) { addAttrRow('point'); }
+
+    var myModal = new bootstrap.Modal(document.getElementById('modalDataPoint'));
+    myModal.show();
+
+    document.getElementById('modalDataPoint').addEventListener('shown.bs.modal', function(){
+        initDrawPointMap();
+    }, {once:true});
+}
+
+function openEditPoint(item, grupData) {
+    fetch('<?= base_url("geospasial/getDetail/point") ?>/' + item.id, { headers: { "X-Requested-With": "XMLHttpRequest" } })
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('point_id').value = data.id;
+        document.getElementById('point_id_grup').value = grupData.id_dg;
+        document.getElementById('point_nama').value = data.nama_dg;
+
+        const pdfContainer = document.getElementById('point_pdf_list');
+        pdfContainer.innerHTML = '';
+        if(data.daftar_pdf) {
+            data.daftar_pdf.forEach(pdf => {
+                pdfContainer.innerHTML += `<div class="d-flex justify-content-between align-items-center mb-1 border-bottom pb-1" id="pdf-item-${pdf.id}"><small>${pdf.judul_pdf}</small><button type="button" class="btn btn-xs text-danger" onclick="deletePdfItem(${pdf.id})">&times;</button></div>`;
+            });
+        }
+
+        document.getElementById('point_attr_area').innerHTML = '';
+        try { JSON.parse(data.atribut_tambahan).forEach(x => addAttrRow('point', x.label, x.value)); } catch(e) {}
+
+        var myModal = new bootstrap.Modal(document.getElementById('modalDataPoint'));
+        myModal.show();
+
+        document.getElementById('modalDataPoint').addEventListener('shown.bs.modal', function(){
+            initDrawPointMap(data.data_geospasial);
+        }, {once:true});
+    });
+}
+
+// Map Engine Khusus Point (Google Sat)
+function initDrawPointMap(jsonStr = null) {
+    if (mapPoint) mapPoint.remove();
+    mapPoint = L.map('map_draw_point').setView(DEFAULT_COORD, 13);
+    L.tileLayer(GOOGLE_SAT_URL).addTo(mapPoint); // FIX: Google Sat
+    
+    drawPointLayer = null;
+
+    if(jsonStr) {
+        try {
+            var geo = JSON.parse(jsonStr);
+            var lng = geo.geometry.coordinates[0];
+            var lat = geo.geometry.coordinates[1];
+            setPointMarker([lat, lng]);
+            mapPoint.setView([lat, lng], 16);
+        } catch(e) {}
+    }
+
+    mapPoint.on('click', function(e) { setPointMarker(e.latlng); });
+}
+
+function setPointMarker(latlng) {
+    if (drawPointLayer) mapPoint.removeLayer(drawPointLayer);
+    drawPointLayer = L.marker(latlng, {draggable: true}).addTo(mapPoint);
+    document.getElementById('point_geojson').value = JSON.stringify(drawPointLayer.toGeoJSON());
+    drawPointLayer.on('dragend', function(e) {
+        document.getElementById('point_geojson').value = JSON.stringify(e.target.toGeoJSON());
+    });
+}
+
+// --- FUNGSI EXPORT GEOJSON (FIXED) ---
+function doExportAJAX(idGrup, namaGrup, btn) {
+    // 1. Simpan state tombol asli (Text dan Title)
+    const originalContent = btn.innerHTML;
+    const originalTitle = btn.title || ''; // Handle jika title kosong
+    
+    // 2. Ubah tampilan tombol jadi loading
+    btn.disabled = true;
+    btn.innerHTML = `<i class="fas fa-spinner fa-spin text-success"></i>`;
+    btn.title = "Sedang memproses data...";
+
+    // 3. Request ke Controller
+    // Pastikan URL base_url benar
+    fetch(`<?= base_url('geospasial/exportGeoJSON') ?>/${idGrup}`)
+        .then(response => {
+            // Cek status HTTP
+            if (response.ok) { // response.ok mencakup status 200-299
+                return response.blob();
+            } else {
+                // Jika server error (500) atau not found (404)
+                throw new Error(`Gagal mengambil data. Status: ${response.status}`);
+            }
+        })
+        .then(blob => {
+            // Cek ukuran file, jika 0 bytes berarti gagal generate
+            if (blob.size === 0) {
+                throw new Error("File GeoJSON kosong. Mungkin tidak ada data dalam grup ini.");
+            }
+
+            // 4. Buat link download virtual
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            
+            // Format nama file agar aman dari karakter aneh
+            const cleanName = namaGrup.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            a.download = `${cleanName}_export.geojson`;
+            
+            document.body.appendChild(a);
+            a.click();
+            
+            // Cleanup
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        })
+        .catch(error => {
+            console.error('Export Error:', error);
+            // Tampilkan pesan error yang lebih spesifik
+            alert("Gagal export data! Silakan cek Console (F12) untuk detail error.\n\nKemungkinan: Data Poligon terlalu besar atau Server Timeout.");
+        })
+        .finally(() => {
+            // 5. Kembalikan tombol seperti semula
+            btn.disabled = false;
+            btn.innerHTML = originalContent;
+            btn.title = originalTitle;
+        });
+}
+
+// --- FILE UPLOAD HANDLER ---
+document.getElementById('formImportGrup')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btnSubmitImport');
+    const progressBar = document.getElementById('importProgressBar');
+    const statusText = document.getElementById('importStatusText');
+    const progressCont = document.getElementById('importProgressContainer');
+
+    btn.disabled = true;
+    progressCont.classList.remove('d-none');
+
+    const xhr = new XMLHttpRequest();
+    xhr.upload.addEventListener('progress', function(e) {
+        if (e.lengthComputable) {
+            const percent = Math.round((e.loaded / e.total) * 100);
+            progressBar.style.width = percent + '%';
+            progressBar.innerHTML = percent + '%';
+            statusText.innerText = percent < 100 ? 'Mengunggah...' : 'Memproses database...';
+        }
+    });
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4) {
+            const res = JSON.parse(xhr.responseText);
+            if(res.status === 'success') {
+                alert('Berhasil!'); window.location.reload();
+            } else {
+                alert('Gagal: ' + res.message); btn.disabled = false;
+            }
+        }
+    };
+    xhr.open('POST', '<?= base_url('geospasial/importGeoJSONGrup') ?>', true);
+    xhr.send(new FormData(this));
+});
+
 function handleFileUpload(input) {
     const f = input.files[0]; if(!f) return;
     const r = new FileReader();
-    r.onload = e => { try { clearMapDraw(); loadGeoJSON(e.target.result); } catch(err){ alert('GeoJSON Tidak Valid'); } };
-    r.readAsText(f); input.value = '';
+    r.onload = e => { 
+        try { 
+            clearMapDraw(); 
+            loadGeoJSON(e.target.result); // Menggunakan fungsi loadGeoJSON yang baru
+        } catch(err){ 
+            alert('GeoJSON Tidak Valid'); 
+        } 
+    };
+    r.readAsText(f); 
+    input.value = '';
 }
 
-function setDashPreset(val) {
-    const input = document.getElementById('style_dashArray');
-    input.value = val;
-    // Trigger event 'input' secara manual agar preview terupdate
-    input.dispatchEvent(new Event('input'));
+function analyzeGeoJSON(input) {
+    const f = input.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = function(e) {
+        try {
+            const json = JSON.parse(e.target.result);
+            const selectMap = document.getElementById('column_name_map');
+            if (json.features && json.features.length > 0) {
+                const keys = Object.keys(json.features[0].properties);
+                selectMap.innerHTML = '<option value="">-- Gunakan Nama Default --</option>';
+                keys.forEach(k => {
+                    selectMap.innerHTML += `<option value="${k}">${k} (Contoh: ${json.features[0].properties[k]})</option>`;
+                });
+                document.getElementById('column_mapping_container').classList.remove('d-none');
+            }
+        } catch (err) {}
+    };
+    r.readAsText(f);
 }
 
-// Tambahkan ini di bagian script
-document.getElementById('formPolygonData')?.addEventListener('submit', function(e) {
-    const btn = document.getElementById('btnSimpanPoly');
-    
-    // 1. Tambahkan class loading (dari CSS Anda)
-    btn.classList.add('btn-loading');
-    
-    // 2. Ubah teks tombol agar user tahu proses sedang berjalan
-    btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Menyimpan...`;
-    
-    // 3. (Opsional) Matikan tombol agar tidak diklik dua kali
-    btn.disabled = true;
-});
-
-document.querySelector('#modalGrup form')?.addEventListener('submit', function(e) {
-    const btn = this.querySelector('button[type="submit"]');
-    btn.classList.add('btn-loading');
-    btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Memproses...`;
-    btn.disabled = true;
-});
-
-// Deklarasi global agar tidak undefined
-let importStyleMap, importStyleLayer;
+// --- TAMBAHAN LOGIC IMPORT & PREVIEW ---
 
 function openImportGrupModal() {
     const modalEl = document.getElementById('modalImportGrup');
@@ -1139,7 +1391,7 @@ function initImportStyleMap(style) {
     if (importStyleMap) importStyleMap.remove();
     
     importStyleMap = L.map('map_import_preview', { zoomControl: false, attributionControl: false }).setView(DEFAULT_COORD, 13);
-    L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}').addTo(importStyleMap);
+    L.tileLayer(GOOGLE_SAT_URL).addTo(importStyleMap);
     
     // Gunakan segitiga sederhana untuk preview
     importStyleLayer = L.polygon([
@@ -1150,7 +1402,7 @@ function initImportStyleMap(style) {
     
     importStyleMap.fitBounds(importStyleLayer.getBounds(), { padding: [20, 20] });
 
-    // Listener Input (Tiru cara kamu)
+    // Listener Input Live Preview
     const ids = ['import_style_color', 'import_style_weight', 'import_style_opacity', 'import_style_fillColor', 'import_style_fillOpacity', 'import_style_dashArray'];
     ids.forEach(id => {
         document.getElementById(id)?.addEventListener('input', () => {
@@ -1172,288 +1424,12 @@ function setImportDashPreset(val) {
     el.dispatchEvent(new Event('input'));
 }
 
-// Handler AJAX Upload dengan Progress Bar
-document.getElementById('formImportGrup')?.addEventListener('submit', function(e) {
-    e.preventDefault();
-    const btn = document.getElementById('btnSubmitImport');
-    const progressCont = document.getElementById('importProgressContainer');
-    const progressBar = document.getElementById('importProgressBar');
-    const statusText = document.getElementById('importStatusText');
-
-    btn.disabled = true;
-    progressCont.classList.remove('d-none');
-
-    const xhr = new XMLHttpRequest();
-    xhr.upload.addEventListener('progress', function(e) {
-        if (e.lengthComputable) {
-            const percent = Math.round((e.loaded / e.total) * 100);
-            progressBar.style.width = percent + '%';
-            progressBar.innerHTML = percent + '%';
-            statusText.innerText = percent < 100 ? 'Mengunggah file...' : 'Memproses database (Jangan tutup halaman)...';
-        }
-    });
-
-    xhr.onreadystatechange = function() {
-        if (xhr.readyState === 4 && xhr.status === 200) {
-            const res = JSON.parse(xhr.responseText);
-            if(res.status === 'success') {
-                alert('Berhasil mengimpor ' + res.count + ' poligon!');
-                window.location.reload();
-            } else {
-                alert('Gagal: ' + res.message);
-                btn.disabled = false;
-            }
-        }
-    };
-
-    xhr.open('POST', '<?= base_url('geospasial/importGeoJSONGrup') ?>', true);
-    xhr.send(new FormData(this));
-});
-
-async function openEditPolygon(item, grupData, btn) {
-    if(btn) btn.style.pointerEvents = 'none';
-
-    try {
-        // PERBAIKAN: Tambahkan parameter kedua untuk headers
-        const response = await fetch(`<?= base_url('geospasial/getDetail/polygon') ?>/${item.id}`, {
-            headers: {
-                "X-Requested-With": "XMLHttpRequest"
-            }
-        });
-        
-        if (!response.ok) throw new Error("Gagal mengambil data (Status: " + response.status + ")");
-
-        const fullData = await response.json();
-        
-        preparePolygonModal(fullData.id_dg, grupData, fullData);
-
-    } catch (error) {
-        console.error("Fetch error:", error);
-        alert("Gagal memuat data: " + error.message);
-    } finally {
-        if(btn) btn.style.pointerEvents = 'auto';
+// Helper untuk Dash Array di Modal Edit Grup Biasa
+function setDashPreset(val) {
+    const input = document.getElementById('style_dashArray');
+    if(input) {
+        input.value = val;
+        input.dispatchEvent(new Event('input'));
     }
-}
-
-function analyzeGeoJSON(input) {
-    const file = input.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            const json = JSON.parse(e.target.result);
-            const mappingContainer = document.getElementById('column_mapping_container');
-            const selectMap = document.getElementById('column_name_map');
-            
-            if (json.features && json.features.length > 0) {
-                const properties = json.features[0].properties;
-                const keys = Object.keys(properties);
-
-                selectMap.innerHTML = '<option value="">-- Gunakan Nama Default --</option>';
-                keys.forEach(key => {
-                    const opt = document.createElement('option');
-                    opt.value = key;
-                    opt.innerText = key + " (Contoh: " + properties[key] + ")";
-                    selectMap.appendChild(opt);
-                });
-
-                mappingContainer.classList.remove('d-none');
-            }
-        } catch (err) {
-            alert("File GeoJSON tidak bisa dibaca/rusak.");
-        }
-    };
-    reader.readAsText(file);
-}
-
-
-// --- FUNGSI EXPORT GEOJSON ---
-function doExportAJAX(idGrup, namaGrup, btn) {
-    // 1. Simpan state tombol asli
-    const originalContent = btn.innerHTML;
-    const originalTitle = btn.title;
-    
-    // 2. Ubah tampilan tombol jadi loading
-    btn.disabled = true;
-    btn.innerHTML = `<i class="fas fa-spinner fa-spin text-success"></i>`;
-    btn.title = "Sedang mengunduh...";
-
-    // 3. Request ke Controller
-    fetch(`<?= base_url('geospasial/exportGeoJSON') ?>/${idGrup}`)
-        .then(response => {
-            if (response.status === 200) {
-                return response.blob();
-            } else {
-                throw new Error('Gagal mengambil data');
-            }
-        })
-        .then(blob => {
-            // 4. Buat link download virtual
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = url;
-            
-            // Format nama file
-            const cleanName = namaGrup.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-            a.download = `${cleanName}_export.geojson`;
-            
-            document.body.appendChild(a);
-            a.click();
-            
-            // Cleanup
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert("Terjadi kesalahan saat mengexport data. Pastikan data geospasial valid.");
-        })
-        .finally(() => {
-            // 5. Kembalikan tombol seperti semula
-            btn.disabled = false;
-            btn.innerHTML = originalContent;
-            btn.title = originalTitle;
-        });
-}
-
-// --- VARIABEL GLOBAL MAP ---
-var mapLine, drawLineLayer, lineMarkers = [];
-var mapPoint, drawPointLayer;
-
-// --- INIT SAAT MODAL DIBUKA (EVENT LISTENER) ---
-
-// 1. SAAT MODAL LINE DIBUKA
-document.getElementById('modalDataLine').addEventListener('shown.bs.modal', function () {
-    if (!mapLine) {
-        mapLine = L.map('map_draw_line').setView([-7.4, 111.4], 12); // Ganti koordinat default Ngawi
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapLine);
-        
-        // Klik peta untuk tambah titik garis
-        mapLine.on('click', function(e) {
-            var m = L.marker(e.latlng, {draggable: true}).addTo(mapLine);
-            lineMarkers.push(m);
-            updateLineGeoJSON();
-            
-            m.on('drag', updateLineGeoJSON);
-            m.on('click', function() { // Klik marker untuk hapus
-                mapLine.removeLayer(this);
-                lineMarkers = lineMarkers.filter(item => item !== this);
-                updateLineGeoJSON();
-            });
-        });
-    }
-    setTimeout(function(){ mapLine.invalidateSize(); }, 10);
-});
-
-// Fungsi Update GeoJSON Line
-function updateLineGeoJSON() {
-    if (drawLineLayer) mapLine.removeLayer(drawLineLayer);
-    
-    var latlngs = lineMarkers.map(m => m.getLatLng());
-    if (latlngs.length > 1) {
-        drawLineLayer = L.polyline(latlngs, {color: 'blue'}).addTo(mapLine);
-        // Simpan ke textarea hidden
-        document.getElementById('line_geojson').value = JSON.stringify(drawLineLayer.toGeoJSON());
-    } else {
-        document.getElementById('line_geojson').value = '';
-    }
-}
-
-// 2. SAAT MODAL POINT DIBUKA
-document.getElementById('modalDataPoint').addEventListener('shown.bs.modal', function () {
-    if (!mapPoint) {
-        mapPoint = L.map('map_draw_point').setView([-7.4, 111.4], 12);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapPoint);
-
-        // Klik untuk pindah marker
-        mapPoint.on('click', function(e) {
-            setPointMarker(e.latlng);
-        });
-    }
-    setTimeout(function(){ mapPoint.invalidateSize(); }, 10);
-});
-
-function setPointMarker(latlng) {
-    if (drawPointLayer) mapPoint.removeLayer(drawPointLayer);
-    drawPointLayer = L.marker(latlng, {draggable: true}).addTo(mapPoint);
-    
-    // Simpan ke textarea hidden
-    document.getElementById('point_geojson').value = JSON.stringify(drawPointLayer.toGeoJSON());
-    
-    drawPointLayer.on('dragend', function(e) {
-        document.getElementById('point_geojson').value = JSON.stringify(e.target.toGeoJSON());
-    });
-}
-
-// --- FUNGSI RESET MAP SAAT EDIT DATA ---
-function editLine(id, idGrup) {
-    // 1. Reset Map
-    if(drawLineLayer) mapLine.removeLayer(drawLineLayer);
-    lineMarkers.forEach(m => mapLine.removeLayer(m));
-    lineMarkers = [];
-    
-    // 2. AJAX Get Detail
-    fetch('<?= base_url("geospasial/getDetail/line") ?>/' + id)
-        .then(r => r.json())
-        .then(data => {
-            document.getElementById('line_id').value = data.id;
-            document.getElementById('line_id_grup').value = idGrup;
-            document.getElementById('line_nama').value = data.nama_dg;
-            
-            // Load GeoJSON ke Peta
-            if(data.data_geospasial) {
-                try {
-                    var geo = JSON.parse(data.data_geospasial);
-                    var layer = L.geoJSON(geo).getLayers()[0]; 
-                    var latlngs = layer.getLatLngs();
-                    
-                    // Render ulang marker dari data database
-                    latlngs.forEach(ll => {
-                        var m = L.marker(ll, {draggable:true}).addTo(mapLine);
-                        lineMarkers.push(m);
-                        
-                        // --- INI BAGIAN YANG ANDA LEWATKAN TADI ---
-                        // Event Listener agar marker bisa digeser/dihapus saat mode edit
-                        m.on('drag', updateLineGeoJSON);
-                        m.on('click', function() { 
-                            mapLine.removeLayer(this);
-                            lineMarkers = lineMarkers.filter(item => item !== this);
-                            updateLineGeoJSON();
-                        });
-                        // ------------------------------------------
-                    });
-                    
-                    updateLineGeoJSON(); // Gambar garis antar marker
-                    mapLine.fitBounds(layer.getBounds()); // Zoom ke lokasi
-                } catch(e) { console.error("Error parsing GeoJSON Line", e); }
-            }
-            
-            var myModal = new bootstrap.Modal(document.getElementById('modalDataLine'));
-            myModal.show();
-        });
-}
-
-function editPoint(id, idGrup) {
-    fetch('<?= base_url("geospasial/getDetail/point") ?>/' + id)
-        .then(r => r.json())
-        .then(data => {
-            document.getElementById('point_id').value = data.id;
-            document.getElementById('point_id_grup').value = idGrup;
-            document.getElementById('point_nama').value = data.nama_dg;
-
-            if(data.data_geospasial) {
-                var geo = JSON.parse(data.data_geospasial);
-                // GeoJSON Point koordinatnya [lng, lat]
-                var lng = geo.geometry.coordinates[0];
-                var lat = geo.geometry.coordinates[1];
-                setPointMarker([lat, lng]);
-                mapPoint.setView([lat, lng], 15);
-            }
-
-            var myModal = new bootstrap.Modal(document.getElementById('modalDataPoint'));
-            myModal.show();
-        });
 }
 </script>

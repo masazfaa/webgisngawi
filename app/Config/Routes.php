@@ -30,4 +30,8 @@ $routes->group('geospasial', function($routes) {
     
     // Delete PDF
     $routes->post('deletePdf/(:num)', 'GeospasialController::deletePdf/$1');
+
+    // Route untuk Export GeoJSON
+    // (:num) memastikan parameter yang diterima hanya angka (ID Grup)
+    $routes->get('geospasial/exportGeoJSON/(:num)', 'Geospasial::exportGeoJSON/$1');
 });

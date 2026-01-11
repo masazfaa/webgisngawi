@@ -367,47 +367,119 @@ class GeospasialController extends BaseController
     // =========================================================================
     // EXPORT
     // =========================================================================
-    public function exportGeoJSON($idGrup)
-    {
-        // Tetap set memory limit tinggi untuk export
-        ini_set('memory_limit', '-1');
-        set_time_limit(0);
+public function exportGeoJSON($idGrup)
+{
+    // 1. SETTING WAJIB: Atasi masalah Memory Limit & Timeout (Untuk Poligon Besar)
+    ini_set('memory_limit', '-1'); 
+    set_time_limit(0);
 
-        $grup = $this->grupModel->find($idGrup);
-        if (!$grup) return redirect()->back();
+    // 2. Cek Grup
+    // Berdasarkan migrasi: Tabel 'geospasial_grup', PK 'id_dg'
+    $grup = $this->grupModel->find($idGrup);
+    
+    if (!$grup) {
+        return redirect()->back()->with('error', 'Grup tidak ditemukan.');
+    }
 
-        if ($grup['jenis_peta'] == 'Line') $model = $this->lineModel;
-        elseif ($grup['jenis_peta'] == 'Point') $model = $this->pointModel;
-        else $model = $this->poligonModel;
+    // 3. Pilih Model berdasarkan jenis peta
+    $jenis = $grup['jenis_peta']; // Enum: 'Point', 'Line', 'Polygon'
+    
+    if ($jenis == 'Line') {
+        $model = $this->lineModel;
+    } elseif ($jenis == 'Point') {
+        $model = $this->pointModel;
+    } else {
+        $model = $this->poligonModel;
+    }
 
-        // Disini kita HARUS mengambil data_geospasial
-        // Jika data sangat besar, sebaiknya gunakan cursor/chunk, 
-        // tapi untuk download file biasanya findAll masih oke jika di bawah 500MB
-        $items = $model->where('id_dg', $idGrup)->findAll();
+    // 4. QUERY DATABASE (DISESUAIKAN DENGAN MIGRATION ANDA)
+    // Di migration: $this->forge->addForeignKey('id_dg', ...)
+    // Jadi kolom penghubung di tabel anak bernama 'id_dg'
+    $items = $model->where('id_dg', $idGrup)->findAll(); 
 
-        $features = [];
-        foreach ($items as $item) {
-            $rawGeo = json_decode($item['data_geospasial'], true);
-            $geometry = $rawGeo['geometry'] ?? ($rawGeo['type'] !== 'Feature' ? $rawGeo : null);
-            if (!$geometry) continue;
+    // Cek jika data kosong
+    if (empty($items)) {
+        // Return JSON kosong yang valid agar tidak error di JS
+        $emptyGeoJSON = json_encode([
+            'type' => 'FeatureCollection', 
+            'name' => $grup['nama_grup'],
+            'features' => []
+        ]);
+        return $this->response->download(url_title($grup['nama_grup']) . '_kosong.geojson', $emptyGeoJSON);
+    }
 
-            $props = ['id' => $item['id'], 'nama' => $item['nama_dg']];
-            
-            $props['stroke'] = $grup['color'];
-            $props['stroke-width'] = $grup['weight'];
-            if ($grup['jenis_peta'] == 'Polygon') {
-                $props['fill'] = $grup['fillColor'];
-                $props['fill-opacity'] = $grup['fillOpacity'];
+    $features = [];
+    foreach ($items as $item) {
+        // 5. DECODE DATA GEOSPASIAL (Robust Parsing)
+        // Data di kolom 'data_geospasial' bertipe LONGTEXT
+        $rawGeo = json_decode($item['data_geospasial'], true);
+        
+        // Validasi: Pastikan hasil decode valid
+        if (!$rawGeo) continue;
+
+        // Validasi Geometri: 
+        // Leaflet.draw kadang menyimpan sebagai "Feature" lengkap, kadang cuma "Geometry"
+        $geometry = null;
+        if (isset($rawGeo['type'])) {
+            if ($rawGeo['type'] === 'Feature' && isset($rawGeo['geometry'])) {
+                $geometry = $rawGeo['geometry'];
+            } elseif ($rawGeo['type'] === 'Polygon' || $rawGeo['type'] === 'LineString' || $rawGeo['type'] === 'Point') {
+                $geometry = $rawGeo;
             }
-            
-            $attrs = json_decode($item['atribut_tambahan'], true);
-            if ($attrs) foreach ($attrs as $a) $props[$a['label']] = $a['value'];
+        }
+        
+        // Skip jika geometri tidak dikenali
+        if (!$geometry) continue;
 
-            $features[] = ['type' => 'Feature', 'properties' => $props, 'geometry' => $geometry];
+        // 6. SUSUN PROPERTIES
+        // Berdasarkan migration: Tabel anak punya kolom 'id', 'nama_dg', 'atribut_tambahan'
+        $props = [
+            'id' => $item['id'], // Primary Key tabel anak
+            'nama' => $item['nama_dg']
+        ];
+        
+        // Style (Warna/Tebal) dari Grup
+        // GeoJSON SimpleStyle Spec agar langsung berwarna di aplikasi lain
+        $props['stroke'] = $grup['color'];
+        $props['stroke-width'] = (float)$grup['weight'];
+        $props['stroke-opacity'] = (float)$grup['opacity'];
+        
+        if ($jenis == 'Polygon') {
+            $props['fill'] = $grup['fillColor'];
+            $props['fill-opacity'] = (float)$grup['fillOpacity'];
+        }
+        
+        // Atribut Tambahan (Dinamis dari kolom JSON)
+        if (!empty($item['atribut_tambahan'])) {
+            $attrs = json_decode($item['atribut_tambahan'], true);
+            if (is_array($attrs)) {
+                foreach ($attrs as $a) {
+                    // Format JSON atribut biasanya: [{"label": "Luas", "value": "100"}]
+                    if (isset($a['label'])) {
+                        $props[$a['label']] = $a['value'] ?? '';
+                    }
+                }
+            }
         }
 
-        return $this->response->download(url_title($grup['nama_grup']) . '.geojson', json_encode(['type' => 'FeatureCollection', 'features' => $features]));
+        $features[] = [
+            'type' => 'Feature', 
+            'properties' => $props, 
+            'geometry' => $geometry
+        ];
     }
+
+    // 7. HASIL AKHIR
+    $finalGeoJSON = [
+        'type' => 'FeatureCollection',
+        'name' => $grup['nama_grup'],
+        'features' => $features
+    ];
+
+    $filename = url_title($grup['nama_grup'], '_', true) . '.geojson';
+
+    return $this->response->download($filename, json_encode($finalGeoJSON));
+}
 
     // =========================================================================
     // DELETE

@@ -145,10 +145,7 @@ class GeospasialController extends BaseController
         return $this->response->setJSON($data);
     }
 
-    // =========================================================================
-    // SAVE GRUP
-    // =========================================================================
-    public function saveGrup()
+public function saveGrup()
     {
         $idGrup      = $this->request->getPost('id_dg');
         $labelColumn = $this->request->getPost('label_column');
@@ -168,6 +165,27 @@ class GeospasialController extends BaseController
             }
         }
 
+        // --- 1. LOGIKA MARKER ICON (TAMBAHAN BARU) ---
+        $markerType = $this->request->getPost('marker_type') ?? 'circle';
+        $markerIconDB = null;
+
+        if ($markerType === 'icon_url') {
+            $markerIconDB = $this->request->getPost('icon_url_input');
+        } elseif ($markerType === 'icon_file') {
+            $fileIcon = $this->request->getFile('icon_file_input');
+            if ($fileIcon && $fileIcon->isValid() && !$fileIcon->hasMoved()) {
+                $newName = $fileIcon->getRandomName();
+                $fileIcon->move('uploads/icons', $newName);
+                $markerIconDB = $newName;
+            } else {
+                // Jika edit dan tidak upload ulang, ambil icon lama
+                if ($idGrup) {
+                    $oldData = $this->grupModel->find($idGrup);
+                    $markerIconDB = $oldData['marker_icon'] ?? null;
+                }
+            }
+        }
+
         $dataGrup = [
             'nama_grup'       => $this->request->getPost('nama_grup'),
             'label_column'    => $labelColumn,
@@ -178,7 +196,10 @@ class GeospasialController extends BaseController
             'fillColor'       => $this->request->getPost('fillColor'),
             'fillOpacity'     => $this->request->getPost('fillOpacity'),
             'dashArray'       => $this->request->getPost('dashArray'),
-            'atribut_default' => json_encode($templates)
+            'atribut_default' => json_encode($templates),
+            // Masukkan data marker ke database
+            'marker_type'     => $markerType,
+            'marker_icon'     => $markerIconDB
         ];
 
         if (empty($idGrup)) {
@@ -186,14 +207,12 @@ class GeospasialController extends BaseController
         } else {
             $this->grupModel->update($idGrup, $dataGrup);
             
-            // Sync Label (Optional logic)
+            // Sync Label (Tetap seperti kode Anda sebelumnya)
             if (!empty($labelColumn)) {
                 if ($jenisPeta == 'Line') $modelTarget = $this->lineModel;
                 elseif ($jenisPeta == 'Point') $modelTarget = $this->pointModel;
                 else $modelTarget = $this->poligonModel;
 
-                // Warning: Ini bisa berat jika datanya ribuan. 
-                // Jika server crash disini, nonaktifkan fitur sync ini.
                 $items = $modelTarget->select('id, atribut_tambahan')->where('id_dg', $idGrup)->findAll();
                 
                 foreach ($items as $item) {
@@ -212,7 +231,6 @@ class GeospasialController extends BaseController
 
         return redirect()->to('geospasial?tab=' . strtolower($jenisPeta))->with('success', 'Grup berhasil disimpan.');
     }
-
     // =========================================================================
     // SAVE DATA
     // =========================================================================

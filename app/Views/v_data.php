@@ -1107,6 +1107,10 @@ function cleanMapContainer() {
 
 // --- 5. REFRESHER & LISTENERS ---
 function refreshPreview() {
+    // Ambil element marker type untuk memastikan kita dapat nilai terbaru yang dipilih user
+    const markerTypeEl = document.getElementById('style_marker_type');
+    const currentMarkerType = markerTypeEl ? markerTypeEl.value : 'circle';
+
     const style = {
         color: document.getElementById('style_color').value,
         weight: parseInt(document.getElementById('style_weight').value),
@@ -1114,11 +1118,10 @@ function refreshPreview() {
         fillColor: document.getElementById('style_fillColor').value,
         fillOpacity: parseFloat(document.getElementById('style_fillOpacity').value),
         dashArray: document.getElementById('style_dashArray').value,
-        marker_type: document.getElementById('style_marker_type').value,
+        marker_type: currentMarkerType, // Gunakan nilai dari dropdown
         marker_icon: document.getElementById('style_icon_url') ? document.getElementById('style_icon_url').value : ''
     };
 
-    // Router lagi saat ada perubahan input
     if (currentGrupType === 'Point') {
         initMarkerPreviewMap(style);
     } else {
@@ -1142,56 +1145,53 @@ function updateMapStyle() {
 }
 
 function setupStyleListeners() {
-    // 1. Listener Input Standar
-    ['style_color', 'style_weight', 'style_opacity', 'style_fillColor', 'style_fillOpacity', 'style_dashArray'].forEach(id => {
+    // 1. Listeners untuk input standar (Warna, Slider, dll)
+    const standardInputs = ['style_color', 'style_weight', 'style_opacity', 'style_fillColor', 'style_fillOpacity', 'style_dashArray'];
+    
+    standardInputs.forEach(id => {
         const el = document.getElementById(id);
         if(el) {
-            const newEl = el.cloneNode(true); // Bersihkan listener lama
-            el.parentNode.replaceChild(newEl, el);
-            
-            newEl.addEventListener('input', () => {
-                // Jika Circle atau Poly/Line, pakai update ringan
-                const mType = document.getElementById('style_marker_type').value;
+            // Gunakan oninput agar lebih stabil daripada addEventListener jika peta sering di-init ulang
+            el.oninput = function() {
+                const mTypeEl = document.getElementById('style_marker_type');
+                const mType = mTypeEl ? mTypeEl.value : 'circle';
+
+                // Jika Circle atau Poly/Line, gunakan updateStyle (Smooth tanpa refresh map)
                 if (currentGrupType !== 'Point' || mType === 'circle') {
                     updateMapStyle();
                 } else {
-                    refreshPreview(); // Icon butuh refresh total
+                    refreshPreview(); 
                 }
-            });
+            };
         }
     });
 
-    // 2. Listener Khusus Point (Marker Type)
+    // 2. Listener untuk Dropdown Tipe Marker
     const elType = document.getElementById('style_marker_type');
     if(elType) {
-        const newElType = elType.cloneNode(true);
-        elType.parentNode.replaceChild(newElType, elType);
-        newElType.addEventListener('change', () => {
-            toggleMarkerOptions();
-            refreshPreview();
-        });
+        elType.onchange = function() {
+            toggleMarkerOptions(); // Sembunyikan/Tampilkan field input terkait
+            refreshPreview();      // Gambar ulang peta dengan tipe marker baru
+        };
     }
 
-    // 3. Listener File Upload
+    // 3. Listener untuk URL Icon
+    const elUrl = document.getElementById('style_icon_url');
+    if(elUrl) {
+        elUrl.oninput = function() { refreshPreview(); };
+    }
+
+    // 4. Listener untuk File Upload
     const elFile = document.getElementById('style_icon_file');
     if(elFile) {
-        const newElFile = elFile.cloneNode(true);
-        elFile.parentNode.replaceChild(newElFile, elFile);
-        newElFile.addEventListener('change', function(e) {
+        elFile.onchange = function(e) {
             const file = e.target.files[0];
             if(file) {
+                if (tempIconUrl) URL.revokeObjectURL(tempIconUrl); // Hapus memori lama
                 tempIconUrl = URL.createObjectURL(file);
                 refreshPreview();
             }
-        });
-    }
-    
-    // 4. Listener URL
-    const elUrl = document.getElementById('style_icon_url');
-    if(elUrl) {
-        const newElUrl = elUrl.cloneNode(true);
-        elUrl.parentNode.replaceChild(newElUrl, elUrl);
-        newElUrl.addEventListener('input', refreshPreview);
+        };
     }
 }
 

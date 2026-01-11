@@ -390,24 +390,42 @@
                         </div>
                         <div class="table-responsive">
                             <table class="table table-hover align-middle table-in-group border">
-                                <thead><tr><th width="60">ID</th><th>Nama Lokasi</th><th>Koordinat</th><th class="text-center">PDF</th><th width="120" class="text-center">Aksi</th></tr></thead>
+                                <thead>
+                                    <tr>
+                                        <th width="60" class="text-center">ID</th>
+                                        <th>Nama Lokasi</th>
+                                        <th>Atribut Tambahan</th> <th class="text-center">Lampiran PDF</th>
+                                        <th width="120" class="text-center">Aksi</th>
+                                    </tr>
+                                </thead>
                                 <tbody>
                                     <?php if(!empty($grup['items'])): foreach($grup['items'] as $item): ?>
                                     <tr class="item-row">
                                         <td class="text-center text-muted small"><?= $item['id'] ?></td>
                                         <td class="fw-bold itemName"><?= $item['nama_display'] ?></td>
-                                        <td class="small text-muted">
+                                        
+                                        <td>
                                             <?php 
-                                                $geo = json_decode($item['data_geospasial'], true);
-                                                if(isset($geo['geometry']['coordinates'])) {
-                                                    echo number_format($geo['geometry']['coordinates'][1], 5) . ", " . number_format($geo['geometry']['coordinates'][0], 5);
-                                                } else echo "-";
+                                                $attrs = json_decode($item['atribut_tambahan'], true);
+                                                if($attrs) {
+                                                    foreach($attrs as $a) {
+                                                        // Tampilkan Label: Value dalam badge
+                                                        echo "<span class='badge bg-light text-dark border me-1 fw-normal'>{$a['label']}: {$a['value']}</span>";
+                                                    }
+                                                } else {
+                                                    echo "-";
+                                                }
                                             ?>
                                         </td>
+
                                         <td class="text-center">
-                                            <?php if(!empty($item['daftar_pdf'])): foreach($item['daftar_pdf'] as $pdf): ?>
-                                                <a href="<?= base_url('uploads/pdf/'.$pdf['file_path']) ?>" target="_blank" class="btn btn-xs btn-outline-danger"><i class="fas fa-file-pdf"></i></a>
-                                            <?php endforeach; else: echo "-"; endif; ?>
+                                            <div class="d-flex justify-content-center gap-1">
+                                                <?php if(!empty($item['daftar_pdf'])): foreach($item['daftar_pdf'] as $pdf): ?>
+                                                    <a href="<?= base_url('uploads/pdf/'.$pdf['file_path']) ?>" target="_blank" class="btn btn-xs btn-outline-danger" title="<?= $pdf['judul_pdf'] ?>">
+                                                        <i class="fas fa-file-pdf"></i>
+                                                    </a>
+                                                <?php endforeach; else: echo "-"; endif; ?>
+                                            </div>
                                         </td>
                                         <td class="text-center">
                                             <button class="btn btn-xs btn-light border text-warning" onclick='openEditPoint(<?= json_encode($item) ?>, <?= json_encode($grup) ?>)'><i class="fas fa-edit"></i></button>
@@ -415,7 +433,7 @@
                                         </td>
                                     </tr>
                                     <?php endforeach; else: ?>
-                                        <tr class="no-data"><td colspan="5" class="text-center py-4 text-muted small">Belum ada data.</td></tr>
+                                        <tr class="no-data"><td colspan="5" class="text-center py-4 text-muted small">Belum ada data di grup ini.</td></tr>
                                     <?php endif; ?>
                                     <tr class="search-no-result" style="display: none;"><td colspan="5" class="text-center py-3 text-muted">Data tidak ditemukan.</td></tr>
                                 </tbody>

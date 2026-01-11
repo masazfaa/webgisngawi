@@ -1,0 +1,54 @@
+*   [33m4fe0fd9[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfiturlinemanage[m[33m, [m[1;31morigin/main[m[33m, [m[1;32mmain[m[33m)[m Merge pull request #2 from masazfaa/meong
+[31m|[m[32m\[m  
+[31m|[m * [33m92ff0e4[m[33m ([m[1;31morigin/meong[m[33m, [m[1;31morigin/memilih-metode-json-machine[m[33m, [m[1;32mmeong[m[33m, [m[1;32mmemilih-metode-json-machine[m[33m)[m sampe fitur line beres
+* [32m|[m [33m2d87d7b[m Merge pull request #1 from masazfaa/memilih-metode-json-machine
+[33m|[m[32m\[m[32m|[m 
+[33m|[m * [33meaa2bd4[m line kurang import geojson sama map
+[33m|[m * [33ma0aabbf[m cp export dah bisa
+[33m|[m * [33ma457acc[m cp fitur line gatel
+[33m|[m * [33m7365374[m sudah ok poligon
+[33m|[m * [33m41b7f92[m poligon error di delete grup tidak hapus pdf terkait
+[33m|[m * [33m4286612[m memilih antara cara lama atau pakai json-machine
+[33m|[m[33m/[m  
+* [33med3cfa5[m styling popup dan page admin
+* [33mfb26931[m label styling
+* [33md2d92f8[m ya update aja dikit
+* [33mbba8b99[m styling lumayan lah
+* [33m92d3c96[m export ke GeoJSON sudah bisa
+*   [33m0aecd06[m fixed bug poligon grup
+[35m|[m[36m\[m  
+[35m|[m * [33m96cc762[m update migration
+* [36m|[m [33m1ac200f[m benerin bug gabisa add poligon grup tanpa import
+[36m|[m[36m/[m  
+* [33mb66d738[m buat tombol export data poligon gejson aja
+* [33m970bf42[m sudah ada label
+* [33mb4d5c0a[m perbaikan edit grup dan style ke db
+* [33m8e685ce[m poligon kurang opsi inzet
+* [33m25f03e4[m import geojson beres2
+* [33mdd82047[m import geojson beres
+* [33m0544bc6[m cp pengembangan import geojson grup poligon
+* [33m82545e0[m sudah bisa custom dash array, cuman preview dan legenda masih belum advance
+* [33mb940268[m dirapihkan codenya dan cek routes
+* [33mced5617[m soal pdf udah aman
+* [33m9272d9b[m popup sudah ok
+* [33m723d26c[m cp poligon v_home pusing aaaa
+* [33m5953e21[m masih kurang import geojson untuk buat grup poligon
+[36m|[m *   [33m2a369d1[m[33m ([m[1;35mrefs/stash[m[33m)[m WIP on fitur-import-geojson: 8a3f291 cp gagal import geojson
+[36m|[m [1;31m|[m[1;32m\[m  
+[36m|[m [1;31m|[m * [33m2258113[m index on fitur-import-geojson: 8a3f291 cp gagal import geojson
+[36m|[m [1;31m|[m[1;31m/[m  
+[36m|[m * [33m8a3f291[m[33m ([m[1;32mfitur-import-geojson[m[33m)[m cp gagal import geojson
+[36m|[m[36m/[m  
+* [33m76b4f9e[m cp pengembangan manajemen poligon 1
+* [33md7672d1[m fitur lengkap sementara manajemen data poligon
+* [33mbe78034[m page management data polos
+* [33mec5f056[m huft css web map lagi
+* [33mcc01478[m css web map lagih
+* [33m1d68470[m memperbaiki css web map-nya
+* [33m7b25b41[m memperbaiki https basemap
+* [33me180474[m update migrate terbaru
+* [33m37566bd[m membuat peta dasar untuk kab ngawi
+* [33mde175ac[m menambahkan migration untuk data geospasial
+* [33ma6cf3d1[m memperbaiki AuthController
+* [33m7ef18ed[m instalasi myth/auth
+* [33m9e275e9[m inisiasi awal

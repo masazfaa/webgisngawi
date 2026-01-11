@@ -18,13 +18,27 @@ class FinalGeospasialSchema extends Migration
             'nama_grup' => [
                 'type' => 'VARCHAR', 'constraint' => '255',
             ],
-            // --- KOLOM BARU: PENAMAAN DINAMIS ---
+            // --- KOLOM: PENAMAAN DINAMIS ---
             'label_column' => [
                 'type' => 'VARCHAR', 'constraint' => '100', 'null' => true,
                 'comment' => 'Nama key atribut GeoJSON yang dijadikan label utama'
             ],
             'jenis_peta' => [
                 'type' => 'ENUM', 'constraint' => ['Point', 'Line', 'Polygon'], 
+            ],
+
+            // --- KOLOM BARU: CUSTOM MARKER (POINT) ---
+            'marker_type' => [
+                'type'       => 'ENUM',
+                'constraint' => ['circle', 'pin', 'icon_url', 'icon_file'],
+                'default'    => 'circle',
+                'comment'    => 'Jenis visualisasi marker khusus Point'
+            ],
+            'marker_icon' => [
+                'type'       => 'VARCHAR', 
+                'constraint' => '255', 
+                'null'       => true,
+                'comment'    => 'Nama file (jika upload) atau URL penuh (jika link)'
             ],
             
             // --- GLOBAL STYLE LEAFLET ---

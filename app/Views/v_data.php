@@ -123,7 +123,7 @@
                     <button class="btn btn-primary px-4 fw-bold mb-2" onclick="openGrupModal()" style="background: var(--primary); border:none;">
                         <i class="fas fa-layer-group me-2"></i>Grup Poligon Baru
                     </button>
-                    <button class="btn btn-outline-primary px-4 fw-bold mb-2" onclick="openImportGrupModal()">
+                    <button class="btn btn-outline-primary px-4 fw-bold mb-2" onclick="openImportGrupModal('Polygon')">
                         <i class="fas fa-file-import me-2"></i>Import GeoJSON Grup
                     </button>
                 </div>
@@ -244,7 +244,7 @@
                     <button class="btn btn-primary px-4 fw-bold mb-2" onclick="openGrupModal(null, 'Line')" style="background: var(--primary); border:none;">
                         <i class="fas fa-layer-group me-2"></i>Grup Line Baru
                     </button>
-                    <button class="btn btn-outline-primary px-4 fw-bold mb-2" onclick="openImportGrupModal()">
+                    <button class="btn btn-outline-primary px-4 fw-bold mb-2" onclick="openImportGrupModal('Line')">
                         <i class="fas fa-file-import me-2"></i>Import GeoJSON Grup
                     </button>
                 </div>
@@ -344,7 +344,7 @@
                 <button class="btn btn-primary px-4 fw-bold mb-2" onclick="openGrupModal(null, 'Point')" style="background: var(--primary); border:none;">
                     <i class="fas fa-layer-group me-2"></i>Grup Point Baru
                 </button>
-                <button class="btn btn-outline-primary px-4 fw-bold mb-2" onclick="openImportGrupModal()">
+                <button class="btn btn-outline-primary px-4 fw-bold mb-2" onclick="openImportGrupModal('Point')">
                     <i class="fas fa-file-import me-2"></i>Import GeoJSON Grup
                 </button>
             </div>
@@ -1574,14 +1574,30 @@ function analyzeGeoJSON(input) {
     r.readAsText(f);
 }
 
-// --- TAMBAHAN LOGIC IMPORT & PREVIEW ---
+// ==========================================================
+// LOGIKA IMPORT GRUP (UPDATE SUPPORT LINE & POINT)
+// ==========================================================
+let currentImportType = 'Polygon'; // Default
 
-function openImportGrupModal() {
+// Menerima parameter 'type' dari tombol HTML
+function openImportGrupModal(type = 'Polygon') {
     const modalEl = document.getElementById('modalImportGrup');
     const modal = new bootstrap.Modal(modalEl);
     
+    // Simpan tipe yang sedang aktif
+    currentImportType = type;
+    
+    // Update Judul Modal agar user yakin
+    const titleEl = modalEl.querySelector('.modal-title');
+    if(titleEl) titleEl.innerText = `Import GeoJSON Grup (${type})`;
+
+    // Reset Form
     document.getElementById('formImportGrup').reset();
     document.getElementById('importProgressContainer').classList.add('d-none');
+    document.getElementById('column_mapping_container').classList.add('d-none');
+    
+    // Tambahkan input hidden untuk mengirim tipe ke controller (Opsional, untuk memaksa tipe)
+    // Tapi Controller Anda sudah auto-detect, jadi kita fokus ke Visual Preview saja.
     
     modal.show();
 
@@ -1591,39 +1607,79 @@ function openImportGrupModal() {
             color: '#4f46e5', weight: 2, opacity: 1,
             fillColor: '#4f46e5', fillOpacity: 0.2, dashArray: ''
         };
-        initImportStyleMap(initialStyle); 
+        // Kirim tipe ke fungsi map
+        initImportStyleMap(initialStyle, currentImportType); 
     }, { once: true });
 }
 
-function initImportStyleMap(style) {
-    if (importStyleMap) importStyleMap.remove();
+function initImportStyleMap(style, type) {
+    if (importStyleMap) {
+        importStyleMap.off();
+        importStyleMap.remove();
+    }
     
     importStyleMap = L.map('map_import_preview', { zoomControl: false, attributionControl: false }).setView(DEFAULT_COORD, 13);
     L.tileLayer(GOOGLE_SAT_URL).addTo(importStyleMap);
     
-    // Gunakan segitiga sederhana untuk preview
-    importStyleLayer = L.polygon([
-        [DEFAULT_COORD[0] + 0.005, DEFAULT_COORD[1] - 0.005],
-        [DEFAULT_COORD[0] - 0.005, DEFAULT_COORD[1] + 0.005],
-        [DEFAULT_COORD[0] - 0.005, DEFAULT_COORD[1] - 0.005]
-    ], style).addTo(importStyleMap);
+    // GAMBAR PREVIEW SESUAI TIPE
+    if (type === 'Line') {
+        // Gambar GARIS Zig-zag
+        const coords = [
+            [DEFAULT_COORD[0], DEFAULT_COORD[1]-0.02], 
+            [DEFAULT_COORD[0]+0.01, DEFAULT_COORD[1]], 
+            [DEFAULT_COORD[0], DEFAULT_COORD[1]+0.02]
+        ];
+        importStyleLayer = L.polyline(coords, style).addTo(importStyleMap);
+        
+    } else if (type === 'Point') {
+        // Gambar TITIK
+        importStyleLayer = L.circleMarker(DEFAULT_COORD, { ...style, radius: 10 }).addTo(importStyleMap);
+        
+    } else {
+        // Gambar POLIGON (Segitiga)
+        const coords = [
+            [DEFAULT_COORD[0] + 0.005, DEFAULT_COORD[1] - 0.005],
+            [DEFAULT_COORD[0] - 0.005, DEFAULT_COORD[1] + 0.005],
+            [DEFAULT_COORD[0] - 0.005, DEFAULT_COORD[1] - 0.005]
+        ];
+        importStyleLayer = L.polygon(coords, style).addTo(importStyleMap);
+    }
     
-    importStyleMap.fitBounds(importStyleLayer.getBounds(), { padding: [20, 20] });
+    if (type !== 'Point') {
+        importStyleMap.fitBounds(importStyleLayer.getBounds(), { padding: [20, 20] });
+    } else {
+        importStyleMap.setView(DEFAULT_COORD, 15);
+    }
 
-    // Listener Input Live Preview
+    // Listener Input (Sama seperti sebelumnya)
     const ids = ['import_style_color', 'import_style_weight', 'import_style_opacity', 'import_style_fillColor', 'import_style_fillOpacity', 'import_style_dashArray'];
     ids.forEach(id => {
-        document.getElementById(id)?.addEventListener('input', () => {
-            importStyleLayer.setStyle({
-                color: document.getElementById('import_style_color').value,
-                weight: document.getElementById('import_style_weight').value,
-                opacity: document.getElementById('import_style_opacity').value,
-                fillColor: document.getElementById('import_style_fillColor').value,
-                fillOpacity: document.getElementById('import_style_fillOpacity').value,
-                dashArray: document.getElementById('import_style_dashArray').value
+        const el = document.getElementById(id);
+        if(el) {
+            const newEl = el.cloneNode(true);
+            el.parentNode.replaceChild(newEl, el);
+            newEl.addEventListener('input', () => {
+                importStyleLayer.setStyle({
+                    color: document.getElementById('import_style_color').value,
+                    weight: document.getElementById('import_style_weight').value,
+                    opacity: document.getElementById('import_style_opacity').value,
+                    fillColor: document.getElementById('import_style_fillColor').value,
+                    fillOpacity: document.getElementById('import_style_fillOpacity').value,
+                    dashArray: document.getElementById('import_style_dashArray').value
+                });
             });
-        });
+        }
     });
+    
+    // Sembunyikan Style Fill jika Line
+    const elFill = document.getElementById('import_style_fillColor');
+    const elOpac = document.getElementById('import_style_fillOpacity');
+    if (elFill && elOpac) {
+        const fc = elFill.closest('.col-6');
+        const foc = elOpac.closest('.col-6');
+        if(fc) fc.style.display = (type === 'Line') ? 'none' : 'block';
+        if(foc) foc.style.display = (type === 'Line') ? 'none' : 'block';
+    }
 }
 
 function setImportDashPreset(val) {

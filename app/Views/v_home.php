@@ -297,36 +297,41 @@
         ];
         map.addLayer(baseLayers[1].layer); // Default ke Satellite
 
-        // =======================================================
-        // D. DATA LAYERS & PHP INJECTION
+// =======================================================
+        // D. DATA LAYERS & PHP INJECTION (UPDATED FOR POINT & LINE)
         // =======================================================
         var overLayers = [];
-        var searchGroup = new L.LayerGroup().addTo(map); // Layer khusus untuk fitur search
+        var searchGroup = new L.LayerGroup().addTo(map);
 
         <?php if(!empty($layers)): ?>
             <?php foreach($layers as $grup): ?>
                 
-                // --- Cek apakah grup memiliki data fitur ---
                 <?php if(!empty($grup['final_geojson']['features'])): ?>
                     
-                    // 1. Ambil GeoJSON dan Config Style dari PHP
+                    // --- Konfigurasi Awal ---
                     var dataGrup_<?= $grup['id_dg'] ?> = <?= json_encode($grup['final_geojson']) ?>;
-                    
+                    <?php $jenis = $grup['jenis_peta']; ?>
+
+                    // 1. STYLE CONFIGURATION
+                    // Kita sesuaikan style berdasarkan jenis peta
                     var style_<?= $grup['id_dg'] ?> = {
                         color: "<?= $grup['color'] ?>",
-                        weight: <?= $grup['weight'] ?>,
+                        weight: <?= $jenis == 'Point' ? 2 : $grup['weight'] ?>, // Point stroke lebih tipis
                         opacity: 1,
                         fillColor: "<?= $grup['fillColor'] ?>",
                         fillOpacity: <?= $grup['fillOpacity'] ?>,
-                        dashArray: "<?= $grup['dashArray'] ?? '' ?>"
+                        dashArray: "<?= $grup['dashArray'] ?? '' ?>",
+                        // Khusus Point (CircleMarker)
+                        radius: <?= $grup['weight'] + 4 ?>, // Radius dinamis berdasarkan weight
+                        // Khusus Line
+                        fill: <?= $jenis == 'Line' ? 'false' : 'true' ?> 
                     };
 
-                    // 2. Tentukan Icon & Nama Grup untuk Panel Control
+                    // 2. ICON PANEL CONFIGURATION
                     <?php
-                        $jenis = $grup['jenis_peta'];
                         $panelGroupName = "Layer Lainnya";
                         $cssIcon = "";
-                        // Logika Styling Icon Panel
+                        
                         if ($jenis == 'Polygon') {
                             $panelGroupName = " 🗺️ Data Area (Poligon)";
                             $borderStyle = (!empty($grup['dashArray'])) ? ((strpos($grup['dashArray'], '1') !== false) ? 'dotted' : 'dashed') : 'solid';
@@ -336,19 +341,43 @@
                             $cssIcon = "display:inline-block; width:20px; height:4px; background:{$grup['color']}; margin-top:6px;";
                         } else if ($jenis == 'Point') {
                             $panelGroupName = " 📍 Data Lokasi (Titik)";
-                            $cssIcon = "display:inline-block; width:12px; height:12px; background:{$grup['color']}; border:2px solid #fff; border-radius:50%; box-shadow:0 0 2px #000;";
+                            $cssIcon = "display:inline-block; width:10px; height:10px; background:{$grup['fillColor']}; border:2px solid {$grup['color']}; border-radius:50%; box-shadow:0 0 2px rgba(0,0,0,0.3);";
                         }
                     ?>
 
-                    // 3. Buat GeoJSON Layer
+                    // 3. BUILD LEAFLET LAYER
                     var layer_<?= $grup['id_dg'] ?> = L.geoJSON(dataGrup_<?= $grup['id_dg'] ?>, {
                         style: style_<?= $grup['id_dg'] ?>,
+                        
+                        // --- A. POINT TO LAYER (Khusus Titik) ---
+                        // Mengubah titik default menjadi CircleMarker yang mengikuti style DB
+                        pointToLayer: function (feature, latlng) {
+                            <?php if($jenis == 'Point'): ?>
+                                return L.circleMarker(latlng, style_<?= $grup['id_dg'] ?>);
+                            <?php else: ?>
+                                return L.marker(latlng); // Fallback (jarang terjadi jika data valid)
+                            <?php endif; ?>
+                        },
+
+                        // --- B. ON EACH FEATURE (Popup & Interaction) ---
                         onEachFeature: function(feature, layer) {
                             var props = feature.properties;
-                            var layerColor = style_<?= $grup['id_dg'] ?>.color;
+                            var layerColor = style_<?= $grup['id_dg'] ?>.color; // Warna header popup
+
+                            // Highlight Feature saat Hover (Optional Professional Touch)
+                            layer.on({
+                                mouseover: function(e) {
+                                    var l = e.target;
+                                    l.setStyle({ weight: <?= ($jenis == 'Line') ? 5 : 3 ?>, fillOpacity: 0.9 });
+                                    if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) { l.bringToFront(); }
+                                },
+                                mouseout: function(e) {
+                                    layer_<?= $grup['id_dg'] ?>.resetStyle(e.target);
+                                }
+                            });
 
                             // --- BUILD POPUP CONTENT (HTML) ---
-                            // a. Header Popup
+                            // (Kode Popup sama persis seperti sebelumnya, tidak perlu diubah)
                             var content = `
                             <div style="font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; min-width: 280px; max-width: 320px;">
                                 <div style="background-color: ${layerColor}; color: #fff; padding: 12px 40px 12px 15px; display: flex; align-items: center; justify-content: space-between;">
@@ -359,19 +388,14 @@
                                 <div style="max-height: 250px; overflow-y: auto; background: #fff;">
                             `;
 
-                            // b. Table Info
                             if(props.info && props.info.length > 0) {
                                 content += `<table style="width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed;">`;
                                 props.info.forEach((attr, idx) => {
                                     var bg = idx % 2 === 0 ? '#f9f9f9' : '#ffffff'; 
                                     content += `
                                         <tr style="background: ${bg}; border-bottom: 1px solid #eee;">
-                                            <td style="padding: 10px 15px; color: #666; width: 25%; vertical-align: top; word-wrap: break-word; overflow-wrap: break-word;">
-                                                ${attr.label}
-                                            </td>
-                                            <td style="padding: 10px 15px; font-weight: 500; color: #333; text-align: left; word-wrap: break-word; overflow-wrap: break-word; max-width: 180px;">
-                                                ${attr.value}
-                                            </td>
+                                            <td style="padding: 10px 15px; color: #666; width: 35%; vertical-align: top;">${attr.label}</td>
+                                            <td style="padding: 10px 15px; font-weight: 500; color: #333;">${attr.value}</td>
                                         </tr>`;
                                 });
                                 content += `</table>`;
@@ -379,18 +403,17 @@
                                 content += `<div style="padding: 20px; text-align: center; color: #999; font-style: italic; font-size: 12px;">Tidak ada atribut data.</div>`;
                             }
 
-                            // c. PDF Attachment
                             if (props.daftar_pdf && props.daftar_pdf.length > 0) {
                                 content += `
                                     <div style="padding: 15px; background: #f8f9fa; border-top: 1px solid #e9ecef;">
-                                        <div style="font-size: 11px; font-weight: 700; color: #8898aa; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                        <div style="font-size: 11px; font-weight: 700; color: #8898aa; margin-bottom: 10px; text-transform: uppercase;">
                                             <i class="fa-solid fa-paperclip"></i> Dokumen Terkait
                                         </div>
                                 `;
                                 props.daftar_pdf.forEach((doc) => {
                                     var linkPdf = "<?= base_url('uploads/pdf/') ?>/" + doc.file_path;
                                     content += `
-                                        <a href="${linkPdf}" target="_blank" style="display: flex; align-items: center; background: #fff; border: 1px solid #e0e0e0; padding: 10px; border-radius: 6px; text-decoration: none; color: #333; margin-bottom: 8px; transition: all 0.2s ease; font-size: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);"
+                                        <a href="${linkPdf}" target="_blank" style="display: flex; align-items: center; background: #fff; border: 1px solid #e0e0e0; padding: 10px; border-radius: 6px; text-decoration: none; color: #333; margin-bottom: 8px; transition: all 0.2s ease; font-size: 12px;"
                                            onmouseover="this.style.borderColor='${layerColor}'; this.style.color='${layerColor}';"
                                            onmouseout="this.style.borderColor='#e0e0e0'; this.style.color='#333';">
                                             <div style="width: 32px; height: 32px; background: #fff0f0; color: #d32f2f; display: flex; align-items: center; justify-content: center; border-radius: 4px; margin-right: 12px;">
@@ -398,38 +421,48 @@
                                             </div>
                                             <div style="flex: 1; min-width: 0;">
                                                 <div style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${doc.judul_pdf}</div>
-                                                <div style="font-size: 10px; color: #888; margin-top:2px;">Klik untuk unduh</div>
+                                                <div style="font-size: 10px; color: #888;">Klik untuk unduh</div>
                                             </div>
                                         </a>`;
                                 });
                                 content += `</div>`;
                             }
-                            content += `</div></div>`; // Tutup Wrapper
+                            content += `</div></div>`;
 
-                            // Bind Popup Profesional
                             layer.bindPopup(content, { maxWidth: 320, className: 'professional-popup' });
-                            searchGroup.addLayer(layer); // Tambahkan ke Search Group
+                            searchGroup.addLayer(layer);
                         }
                     });
 
-                    // 4. Siapkan Layer Label (Tooltip)
+                    // 4. PREPARE LABELS (TOOLTIP) - LOGIC UPDATED FOR POINTS
                     var labelGroup_<?= $grup['id_dg'] ?> = L.layerGroup();
                     layer_<?= $grup['id_dg'] ?>.eachLayer(function(l) {
-                        if (l.getBounds) {
-                            var center = l.getBounds().getCenter();
+                        var center;
+                        // Logika menentukan posisi label
+                        if (typeof l.getBounds === 'function') {
+                            // Untuk Polygon & Line
+                            center = l.getBounds().getCenter();
+                        } else if (typeof l.getLatLng === 'function') {
+                            // Untuk Point
+                            center = l.getLatLng();
+                        }
+
+                        if (center) {
                             var labelContent = l.feature.properties.nama || 'Tanpa Nama';
                             var label = L.tooltip({
-                                permanent: true, direction: 'center', className: 'polygon-label'
+                                permanent: true, 
+                                direction: 'center', // Point label di tengah
+                                className: 'polygon-label',
+                                offset: [0, 0] 
                             }).setContent(labelContent).setLatLng(center);
                             labelGroup_<?= $grup['id_dg'] ?>.addLayer(label);
                         }
                     });
 
-                    // 5. Konfigurasi Panel Layer
+                    // 5. SETUP PANEL LAYERS
                     <?php $isAdministrasi = (stripos($grup['nama_grup'], 'administrasi') !== false) ? 'true' : 'false'; ?>
                     var labelActive_<?= $grup['id_dg'] ?> = <?= $isAdministrasi ?>;
 
-                    // Push ke array overLayers untuk Panel Control
                     overLayers.push({
                         active: true,
                         group: "<?= $panelGroupName ?>",
@@ -442,7 +475,6 @@
                         }
                     });
 
-                    // Auto-show Label jika Administrasi
                     if (labelActive_<?= $grup['id_dg'] ?>) {
                         labelGroup_<?= $grup['id_dg'] ?>.addTo(map);
                     }

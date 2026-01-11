@@ -516,10 +516,34 @@
                                         <div class="input-group input-group-sm">
                                             <input type="text" name="dashArray" id="style_dashArray" class="form-control" placeholder="5, 10">
                                             <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">Presets</button>
-                                            <ul class="dropdown-menu dropdown-menu-end">
-                                                <li><a class="dropdown-item" onclick="setDashPreset('')">Solid</a></li>
-                                                <li><a class="dropdown-item" onclick="setDashPreset('5, 5')">Dashed</a></li>
-                                            </ul>
+                                                <ul class="dropdown-menu dropdown-menu-end" style="font-size: 0.85rem;">
+                                                            <li><a class="dropdown-item d-flex justify-content-between align-items-center" href="javascript:void(0)" onclick="setDashPreset('')">
+                                                                <span>Solid</span> 
+                                                                <span class="badge bg-secondary" style="width:40px; height:2px;">&nbsp;</span>
+                                                            </a></li>
+                                                            
+                                                            <li><a class="dropdown-item d-flex justify-content-between align-items-center" href="javascript:void(0)" onclick="setDashPreset('10, 10')">
+                                                                <span>Dashed</span> 
+                                                                <span class="text-muted" style="font-size:10px; border-bottom: 2px dashed #999; width:40px;">&nbsp;</span>
+                                                            </a></li>
+
+                                                            <li><a class="dropdown-item d-flex justify-content-between align-items-center" href="javascript:void(0)" onclick="setDashPreset('1, 10')">
+                                                                <span>Dotted</span> 
+                                                                <span class="text-muted" style="font-size:10px; border-bottom: 2px dotted #999; width:40px;">&nbsp;</span>
+                                                            </a></li>
+
+                                                            <li><a class="dropdown-item d-flex justify-content-between align-items-center" href="javascript:void(0)" onclick="setDashPreset('15, 10, 1, 10')">
+                                                                <span>Dash-Dot</span> 
+                                                                <span class="text-muted" style="letter-spacing: 2px;">- . - .</span>
+                                                            </a></li>
+
+                                                            <li><hr class="dropdown-divider"></li>
+                                                            
+                                                            <li><div class="dropdown-item-text text-muted" style="font-size: 0.7rem; white-space: normal;">
+                                                                <i class="fas fa-info-circle me-1"></i> Format: <b>Garis, Spasi, Garis...</b><br>
+                                                                Contoh: "20, 10" = Garis 20px, Spasi 10px.
+                                                            </div></li>
+                                                        </ul>
                                         </div>
                                     </div>
                                     <div class="col-6"><label class="small text-muted">Op. Stroke</label><input type="number" name="opacity" id="style_opacity" class="form-control" value="1" step="0.1" max="1"></div>
@@ -659,17 +683,41 @@
                                     <div class="col-6"><label class="small text-muted">Stroke</label><input type="color" name="color" id="import_style_color" class="form-control form-control-color w-100" value="#4f46e5"></div>
                                     <div class="col-6" id="cont_imp_fill"><label class="small text-muted">Fill</label><input type="color" name="fillColor" id="import_style_fillColor" class="form-control form-control-color w-100" value="#4f46e5"></div>
                                     <div class="col-6"><label class="small text-muted">Weight</label><input type="number" name="weight" id="import_style_weight" class="form-control" value="2"></div>
-                                    <div class="col-12" id="cont_imp_dash">
-                                        <label class="small text-muted fw-bold">Pola Garis</label>
-                                        <div class="input-group input-group-sm">
-                                            <input type="text" name="dashArray" id="import_style_dashArray" class="form-control" placeholder="5, 10">
-                                            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">Presets</button>
-                                            <ul class="dropdown-menu dropdown-menu-end">
-                                                <li><a class="dropdown-item" onclick="setImportDashPreset('')">Solid</a></li>
-                                                <li><a class="dropdown-item" onclick="setImportDashPreset('5, 5')">Dashed</a></li>
-                                            </ul>
+                                        <div class="col-12" id="cont_imp_dash">
+                                            <label class="small text-muted fw-bold">Pola Garis (Dash Array)</label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="text" name="dashArray" id="import_style_dashArray" class="form-control" placeholder="Contoh: 5, 10">
+                                                <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">Presets</button>
+                                                <ul class="dropdown-menu dropdown-menu-end" style="font-size: 0.85rem;">
+                                                    <li><a class="dropdown-item d-flex justify-content-between align-items-center" href="javascript:void(0)" onclick="setImportDashPreset('')">
+                                                        <span>Solid</span> 
+                                                        <span class="badge bg-secondary" style="width:40px; height:2px;">&nbsp;</span>
+                                                    </a></li>
+                                                    
+                                                    <li><a class="dropdown-item d-flex justify-content-between align-items-center" href="javascript:void(0)" onclick="setImportDashPreset('10, 10')">
+                                                        <span>Dashed</span> 
+                                                        <span class="text-muted" style="font-size:10px; border-bottom: 2px dashed #999; width:40px;">&nbsp;</span>
+                                                    </a></li>
+
+                                                    <li><a class="dropdown-item d-flex justify-content-between align-items-center" href="javascript:void(0)" onclick="setImportDashPreset('1, 10')">
+                                                        <span>Dotted</span> 
+                                                        <span class="text-muted" style="font-size:10px; border-bottom: 2px dotted #999; width:40px;">&nbsp;</span>
+                                                    </a></li>
+
+                                                    <li><a class="dropdown-item d-flex justify-content-between align-items-center" href="javascript:void(0)" onclick="setImportDashPreset('15, 10, 1, 10')">
+                                                        <span>Dash-Dot</span> 
+                                                        <span class="text-muted" style="letter-spacing: 2px;">- . - .</span>
+                                                    </a></li>
+
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    
+                                                    <li><div class="dropdown-item-text text-muted" style="font-size: 0.7rem; white-space: normal;">
+                                                        <i class="fas fa-info-circle me-1"></i> Format: <b>Garis, Spasi, Garis...</b><br>
+                                                        Contoh: "20, 10" = Garis 20px, Spasi 10px.
+                                                    </div></li>
+                                                </ul>
+                                            </div>
                                         </div>
-                                    </div>
                                     <div class="col-6"><label class="small text-muted">Op. Stroke</label><input type="number" name="opacity" id="import_style_opacity" class="form-control" value="1" step="0.1" max="1"></div>
                                     <div class="col-6" id="cont_imp_fillOp"><label class="small text-muted">Op. Fill</label><input type="number" name="fillOpacity" id="import_style_fillOpacity" class="form-control" value="0.2" step="0.1" max="1"></div>
                                 </div>

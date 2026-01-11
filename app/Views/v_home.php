@@ -501,8 +501,26 @@
         // Event Sync: Hapus label jika layer induk dimatikan
         map.on('layerremove', function(e) {
             overLayers.forEach(function(item) {
-                if (e.layer === item.layer && item.injectParam && map.hasLayer(item.injectParam.layer)) {
-                    map.removeLayer(item.injectParam.layer);
+                if (e.layer === item.layer && item.injectParam) {
+                    // 1. Matikan status aktif di variabel data
+                    item.injectParam.active = false;
+
+                    // 2. Hapus layer label dari peta jika ada
+                    if (map.hasLayer(item.injectParam.layer)) {
+                        map.removeLayer(item.injectParam.layer);
+                    }
+
+                    // 3. SINKRONISASI UI (Cari checkbox label di dalam Panel Layers)
+                    // Kita mencari checkbox yang bertetangga dengan teks label milik layer ini
+                    var panels = document.querySelectorAll('.leaflet-panel-layers-item-inject');
+                    panels.forEach(function(p) {
+                        // Cek apakah panel ini milik layer yang sedang di-off-kan
+                        // Berdasarkan teks "Tampilkan Label" atau struktur elemennya
+                        if (p.textContent.includes(item.injectParam.label)) {
+                            var cb = p.querySelector('input[type="checkbox"]');
+                            if (cb) cb.checked = false; // Set UI checkbox menjadi OFF
+                        }
+                    });
                 }
             });
         });

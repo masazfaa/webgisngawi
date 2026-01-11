@@ -576,9 +576,6 @@
                     <div class="row">
                         <div class="col-md-4 border-end">
                             <div class="mb-3">
-                            <button class="btn btn-primary ..." onclick="openGrupModal(null, 'Polygon')">
-                                    <i class="fas fa-layer-group me-2"></i>Grup Baru
-                                </button>
                                 <input type="text" name="nama_grup" class="form-control" required placeholder="Contoh: Batas Administrasi RT">
                             </div>
                                 <div class="mb-3">
@@ -643,37 +640,56 @@
 
 <div class="modal fade" id="modalDataLine" tabindex="-1">
     <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <form action="<?= base_url('geospasial/save/line') ?>" method="post" enctype="multipart/form-data">
-                <div class="modal-header">
-                    <h5 class="modal-title">Editor Data Line (Jalur)</h5>
+        <div class="modal-content border-0 shadow">
+            <form action="<?= base_url('geospasial/save/line') ?>" method="post" id="formLineData" enctype="multipart/form-data">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title fw-bold">Editor Entitas Line (Jalur)</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body p-4">
                     <input type="hidden" name="id" id="line_id">
                     <input type="hidden" name="id_dg" id="line_id_grup">
                     <textarea name="data_geospasial" id="line_geojson" class="d-none"></textarea>
 
                     <div class="row">
-                        <div class="col-md-4">
-                            <label>Nama Jalur</label>
-                            <input type="text" name="nama_dg" id="line_nama" class="form-control mb-3" required>
+                        <div class="col-md-4 border-end">
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Nama Jalur</label>
+                                <input type="text" name="nama_dg" id="line_nama" class="form-control" required>
+                            </div>
                             
-                            <label>Upload PDF</label>
-                            <input type="file" name="file_pdf[]" class="form-control mb-3" multiple accept="application/pdf">
-                            <div id="line_pdf_list" class="mb-3 text-sm"></div>
+                            <div class="mb-3 p-3 bg-light border rounded">
+                                <label class="small fw-bold mb-2 text-primary"><i class="fas fa-paperclip me-1"></i> Manajemen Dokumen</label>
+                                <div id="line_pdf_list" class="list-group mb-3 shadow-sm"></div>
+                                <label class="form-label small text-muted">Upload PDF Baru (Bisa banyak):</label>
+                                <input type="file" name="file_pdf[]" class="form-control form-control-sm" accept="application/pdf" multiple>
+                            </div>
 
-                            <div id="line_attr_area"></div>
-                            <button type="button" class="btn btn-sm btn-info mt-2" onclick="addAttrRow('line')">+ Atribut</button>
+                            <hr>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="m-0 fw-bold small">Atribut Detail</h6>
+                                <button type="button" class="btn btn-sm btn-outline-success" onclick="addAttrRow('line')"><i class="fas fa-plus"></i></button>
+                            </div>
+                            <div id="line_attr_area" class="scrollable-area p-0" style="max-height: 200px;"></div>
                         </div>
+
                         <div class="col-md-8">
-                            <div id="map_draw_line" style="height: 400px; width: 100%; border:1px solid #ccc;"></div>
-                            <small class="text-muted">Klik peta untuk membuat titik jalur.</small>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="fw-bold small"><i class="fas fa-route me-1"></i> Gambar Jalur</span>
+                                <div class="btn-group shadow-sm">
+                                    <input type="file" id="fileGeoJSONLine" accept=".json,.geojson" class="d-none" onchange="handleFileUploadLine(this)">
+                                    <button type="button" class="btn btn-xs btn-info text-white" onclick="document.getElementById('fileGeoJSONLine').click()" title="Import GeoJSON"><i class="fas fa-file-import"></i></button>
+                                    
+                                    <button type="button" class="btn btn-xs btn-warning text-white" onclick="resetMapLine()" title="Reset Gambar"><i class="fas fa-redo"></i></button>
+                                </div>
+                            </div>
+                            <div id="map_draw_line" style="height: 400px; width: 100%; border: 2px solid var(--slate-100); border-radius: 12px;"></div>
+                            <small class="text-muted d-block mt-2" style="font-size: 0.7rem;">*Klik pada peta untuk membuat titik jalur, tarik titik untuk menggeser, klik titik untuk menghapus.</small>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary">Simpan Line</button>
+                <div class="modal-footer bg-light">
+                    <button type="submit" class="btn btn-primary px-5 fw-bold"><i class="fas fa-save me-2"></i>Simpan Line</button>
                 </div>
             </form>
         </div>
@@ -681,38 +697,55 @@
 </div>
 
 <div class="modal fade" id="modalDataPoint" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <form action="<?= base_url('geospasial/save/point') ?>" method="post" enctype="multipart/form-data">
-                <div class="modal-header">
-                    <h5 class="modal-title">Editor Data Point (Titik)</h5>
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content border-0 shadow">
+            <form action="<?= base_url('geospasial/save/point') ?>" method="post" id="formPointData" enctype="multipart/form-data">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title fw-bold">Editor Entitas Point (Titik)</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body p-4">
                     <input type="hidden" name="id" id="point_id">
                     <input type="hidden" name="id_dg" id="point_id_grup">
                     <textarea name="data_geospasial" id="point_geojson" class="d-none"></textarea>
 
                     <div class="row">
-                        <div class="col-md-5">
-                            <label>Nama Lokasi</label>
-                            <input type="text" name="nama_dg" id="point_nama" class="form-control mb-3" required>
+                        <div class="col-md-4 border-end">
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Nama Lokasi</label>
+                                <input type="text" name="nama_dg" id="point_nama" class="form-control" required>
+                            </div>
                             
-                            <label>Upload PDF</label>
-                            <input type="file" name="file_pdf[]" class="form-control mb-3" multiple accept="application/pdf">
-                            <div id="point_pdf_list" class="mb-3 text-sm"></div>
+                            <div class="mb-3 p-3 bg-light border rounded">
+                                <label class="small fw-bold mb-2 text-primary"><i class="fas fa-paperclip me-1"></i> Manajemen Dokumen</label>
+                                <div id="point_pdf_list" class="list-group mb-3 shadow-sm"></div>
+                                <label class="form-label small text-muted">Upload PDF Baru (Bisa banyak):</label>
+                                <input type="file" name="file_pdf[]" class="form-control form-control-sm" accept="application/pdf" multiple>
+                            </div>
 
-                            <div id="point_attr_area"></div>
-                            <button type="button" class="btn btn-sm btn-info mt-2" onclick="addAttrRow('point')">+ Atribut</button>
+                            <hr>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="m-0 fw-bold small">Atribut Detail</h6>
+                                <button type="button" class="btn btn-sm btn-outline-success" onclick="addAttrRow('point')"><i class="fas fa-plus"></i></button>
+                            </div>
+                            <div id="point_attr_area" class="scrollable-area p-0" style="max-height: 200px;"></div>
                         </div>
-                        <div class="col-md-7">
-                            <div id="map_draw_point" style="height: 350px; width: 100%; border:1px solid #ccc;"></div>
-                            <small class="text-muted">Geser marker untuk menentukan lokasi.</small>
+
+                        <div class="col-md-8">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="fw-bold small"><i class="fas fa-map-marker-alt me-1"></i> Tentukan Lokasi</span>
+                                <div class="btn-group shadow-sm">
+                                    <input type="file" id="fileGeoJSONPoint" accept=".json,.geojson" class="d-none" onchange="handleFileUploadPoint(this)">
+                                    <button type="button" class="btn btn-xs btn-info text-white" onclick="document.getElementById('fileGeoJSONPoint').click()" title="Import GeoJSON"><i class="fas fa-file-import"></i></button>
+                                </div>
+                            </div>
+                            <div id="map_draw_point" style="height: 400px; width: 100%; border: 2px solid var(--slate-100); border-radius: 12px;"></div>
+                            <small class="text-muted d-block mt-2" style="font-size: 0.7rem;">*Klik pada peta atau geser marker untuk mengubah posisi lokasi.</small>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary">Simpan Point</button>
+                <div class="modal-footer bg-light">
+                    <button type="submit" class="btn btn-primary px-5 fw-bold"><i class="fas fa-save me-2"></i>Simpan Point</button>
                 </div>
             </form>
         </div>
@@ -1076,71 +1109,139 @@ function openAddLine(grupId, grupData) {
 }
 
 function openEditLine(item, grupData) {
-    fetch('<?= base_url("geospasial/getDetail/line") ?>/' + item.id, { headers: { "X-Requested-With": "XMLHttpRequest" } })
+    // Ambil data detail via AJAX
+    fetch('<?= base_url("geospasial/getDetail/line") ?>/' + item.id, {
+        headers: { "X-Requested-With": "XMLHttpRequest" }
+    })
     .then(r => r.json())
     .then(data => {
+        // 1. Isi Form Input
         document.getElementById('line_id').value = data.id;
         document.getElementById('line_id_grup').value = grupData.id_dg;
         document.getElementById('line_nama').value = data.nama_dg;
         
-        // Load PDF
+        // 2. Load Daftar PDF
         const pdfContainer = document.getElementById('line_pdf_list');
         pdfContainer.innerHTML = '';
         if(data.daftar_pdf) {
             data.daftar_pdf.forEach(pdf => {
-                pdfContainer.innerHTML += `<div class="d-flex justify-content-between align-items-center mb-1 border-bottom pb-1" id="pdf-item-${pdf.id}"><small>${pdf.judul_pdf}</small><button type="button" class="btn btn-xs text-danger" onclick="deletePdfItem(${pdf.id})">&times;</button></div>`;
+                pdfContainer.innerHTML += `
+                    <div class="d-flex justify-content-between align-items-center mb-1 border-bottom pb-1" id="pdf-item-${pdf.id}">
+                        <a href="<?= base_url('uploads/pdf') ?>/${pdf.file_path}" target="_blank" class="small text-decoration-none">
+                            <i class="fas fa-file-pdf text-danger"></i> ${pdf.judul_pdf}
+                        </a>
+                        <button type="button" class="btn btn-xs text-danger" onclick="deletePdfItem(${pdf.id})">&times;</button>
+                    </div>`;
             });
         }
 
-        // Load Atribut
+        // 3. Load Atribut Tambahan
         document.getElementById('line_attr_area').innerHTML = '';
         try { JSON.parse(data.atribut_tambahan).forEach(x => addAttrRow('line', x.label, x.value)); } catch(e) {}
 
-        // Set Style
+        // 4. Set Style Global
         currentGroupStyle = { color: grupData.color, weight: grupData.weight, dashArray: grupData.dashArray };
 
+        // 5. TAMPILKAN MODAL DULU
         var myModal = new bootstrap.Modal(document.getElementById('modalDataLine'));
         myModal.show();
-
+        
+        // 6. SETELAH MODAL MUNCUL, BARU INIT PETA & GAMBAR DATA
+        // Ini solusi error "undefined reading addLayer"
         document.getElementById('modalDataLine').addEventListener('shown.bs.modal', function(){
-            initDrawLineMap(data.data_geospasial); // Load Map dengan Data
+            // Kirim data GeoJSON ke fungsi init map
+            initDrawLineMap(data.data_geospasial); 
         }, {once:true});
     });
 }
 
 // Map Engine Khusus Line (Google Sat)
 function initDrawLineMap(jsonStr = null) {
-    if (mapLine) mapLine.remove();
-    mapLine = L.map('map_draw_line').setView(DEFAULT_COORD, 13);
-    L.tileLayer(GOOGLE_SAT_URL).addTo(mapLine); // FIX: Google Sat
+    // 1. Hapus map lama jika ada agar tidak memory leak/double
+    if (mapLine) {
+        mapLine.off();
+        mapLine.remove();
+    }
 
+    // 2. Buat Instance Peta Baru
+    mapLine = L.map('map_draw_line').setView(DEFAULT_COORD, 13);
+    L.tileLayer(GOOGLE_SAT_URL).addTo(mapLine); 
+
+    // 3. Reset Variabel Marker Global
     lineMarkers = [];
     drawLineLayer = null;
 
+    // 4. Jika ada data GeoJSON (Mode Edit), Parsing disini
     if(jsonStr) {
         try {
             const geo = JSON.parse(jsonStr);
             const layer = L.geoJSON(geo).getLayers()[0];
             const latlngs = layer.getLatLngs();
-            latlngs.forEach(ll => addLineMarker(ll));
+            
+            // --- LOGIKA FLAT MARKER (Support MultiLineString) ---
+            // Cek apakah array bersarang (MultiLineString: [[lat,lng], [lat,lng]])
+            if (Array.isArray(latlngs) && latlngs.length > 0 && Array.isArray(latlngs[0])) {
+                // Ratakan arraynya
+                latlngs.forEach(segment => {
+                    segment.forEach(ll => addLineMarker(ll)); // Reuse fungsi addLineMarker
+                });
+            } else {
+                // LineString Biasa: [lat,lng]
+                latlngs.forEach(ll => addLineMarker(ll));
+            }
+
+            // Zoom ke area data
             mapLine.fitBounds(layer.getBounds());
-        } catch(e){}
+        } catch(e){ console.error("Gagal load geojson line", e); }
     }
 
+    // 5. Aktifkan Klik Peta untuk nambah titik baru
     mapLine.on('click', function(e) { addLineMarker(e.latlng); });
 }
 
 function addLineMarker(latlng) {
+    // Pastikan mapLine sudah ada
+    if(!mapLine) return; 
+
     var m = L.marker(latlng, {draggable: true}).addTo(mapLine);
     lineMarkers.push(m);
+    
+    // --- FITUR BARU: KLIK KANAN UNTUK MENUTUP LINE ---
+    m.on('contextmenu', function(e) {
+        // 1. Ambil koordinat marker yang diklik kanan
+        var targetLatLng = this.getLatLng();
+        
+        // 2. Tambahkan titik baru di posisi tersebut (Menyambung garis ke titik ini)
+        addLineMarker(targetLatLng);
+        
+        // 3. Opsional: Beri notifikasi kecil atau console log
+        console.log("Line ditutup/disambung ke titik ini.");
+    });
+    // --------------------------------------------------
+
     updateLineGeoJSON();
     
+    // Event Drag (Geser Titik)
     m.on('drag', updateLineGeoJSON);
+    
+    // Event Klik Kiri (Hapus Titik)
     m.on('click', function() { 
         mapLine.removeLayer(this);
         lineMarkers = lineMarkers.filter(item => item !== this);
         updateLineGeoJSON();
     });
+}
+
+function updateLineGeoJSON() {
+    if (drawLineLayer) mapLine.removeLayer(drawLineLayer);
+    
+    var latlngs = lineMarkers.map(m => m.getLatLng());
+    if (latlngs.length > 1) {
+        drawLineLayer = L.polyline(latlngs, currentGroupStyle).addTo(mapLine);
+        document.getElementById('line_geojson').value = JSON.stringify(drawLineLayer.toGeoJSON());
+    } else {
+        document.getElementById('line_geojson').value = '';
+    }
 }
 
 function updateLineGeoJSON() {
@@ -1181,29 +1282,61 @@ function openAddPoint(grupId, grupData) {
 }
 
 function openEditPoint(item, grupData) {
-    fetch('<?= base_url("geospasial/getDetail/point") ?>/' + item.id, { headers: { "X-Requested-With": "XMLHttpRequest" } })
+    // PERBAIKAN: Gunakan 'item.id', bukan 'id'
+    fetch('<?= base_url("geospasial/getDetail/point") ?>/' + item.id, {
+        headers: { "X-Requested-With": "XMLHttpRequest" }
+    })
     .then(r => r.json())
     .then(data => {
         document.getElementById('point_id').value = data.id;
         document.getElementById('point_id_grup').value = grupData.id_dg;
         document.getElementById('point_nama').value = data.nama_dg;
 
+        // Load PDF
         const pdfContainer = document.getElementById('point_pdf_list');
         pdfContainer.innerHTML = '';
         if(data.daftar_pdf) {
             data.daftar_pdf.forEach(pdf => {
-                pdfContainer.innerHTML += `<div class="d-flex justify-content-between align-items-center mb-1 border-bottom pb-1" id="pdf-item-${pdf.id}"><small>${pdf.judul_pdf}</small><button type="button" class="btn btn-xs text-danger" onclick="deletePdfItem(${pdf.id})">&times;</button></div>`;
+                pdfContainer.innerHTML += `
+                    <div class="d-flex justify-content-between align-items-center mb-1 border-bottom pb-1" id="pdf-item-${pdf.id}">
+                        <a href="<?= base_url('uploads/pdf') ?>/${pdf.file_path}" target="_blank" class="small text-decoration-none">
+                            <i class="fas fa-file-pdf text-danger"></i> ${pdf.judul_pdf}
+                        </a>
+                        <button type="button" class="btn btn-xs text-danger" onclick="deletePdfItem(${pdf.id})">&times;</button>
+                    </div>`;
             });
         }
 
+        // Load Atribut
         document.getElementById('point_attr_area').innerHTML = '';
         try { JSON.parse(data.atribut_tambahan).forEach(x => addAttrRow('point', x.label, x.value)); } catch(e) {}
+
+        // Load Map
+        if(data.data_geospasial) {
+            try {
+                var geo = JSON.parse(data.data_geospasial);
+                // Handle struktur GeoJSON Point
+                var lng, lat;
+                if (geo.geometry && geo.geometry.coordinates) {
+                    lng = geo.geometry.coordinates[0];
+                    lat = geo.geometry.coordinates[1];
+                } else if (geo.coordinates) {
+                    lng = geo.coordinates[0];
+                    lat = geo.coordinates[1];
+                }
+
+                if(lat && lng) {
+                    setPointMarker([lat, lng]);
+                    mapPoint.setView([lat, lng], 15);
+                }
+            } catch(e) { console.error(e); }
+        }
 
         var myModal = new bootstrap.Modal(document.getElementById('modalDataPoint'));
         myModal.show();
 
         document.getElementById('modalDataPoint').addEventListener('shown.bs.modal', function(){
-            initDrawPointMap(data.data_geospasial);
+            mapPoint.invalidateSize();
         }, {once:true});
     });
 }
@@ -1236,6 +1369,81 @@ function setPointMarker(latlng) {
     drawPointLayer.on('dragend', function(e) {
         document.getElementById('point_geojson').value = JSON.stringify(e.target.toGeoJSON());
     });
+}
+
+// --- HELPER IMPORT/RESET KHUSUS LINE & POINT ---
+
+function resetMapLine() {
+    if(drawLineLayer) mapLine.removeLayer(drawLineLayer);
+    lineMarkers.forEach(m => mapLine.removeLayer(m));
+    lineMarkers = [];
+    document.getElementById('line_geojson').value = '';
+}
+
+function handleFileUploadLine(input) {
+    const f = input.files[0]; if(!f) return;
+    const r = new FileReader();
+    
+    r.onload = e => { 
+        try { 
+            resetMapLine(); // Hapus marker lama
+            
+            const geo = JSON.parse(e.target.result);
+            const layer = L.geoJSON(geo);
+            const allLayers = layer.getLayers();
+
+            if (allLayers.length > 0) {
+                // Ambil layer pertama
+                const firstLayer = allLayers[0];
+                let latlngs = firstLayer.getLatLngs();
+
+                // --- LOGIKA PENANGANAN MULTILINESTRING ---
+                // Cek apakah ini array bersarang (MultiLineString) atau array datar (LineString)
+                if (Array.isArray(latlngs) && latlngs.length > 0 && Array.isArray(latlngs[0])) {
+                    // Jika MultiLineString: [[lat,lng], [lat,lng]], kita ratakan jadi satu garis panjang
+                    latlngs.forEach(segment => {
+                        segment.forEach(coord => addLineMarker(coord));
+                    });
+                } else {
+                    // Jika LineString biasa: [lat,lng]
+                    latlngs.forEach(coord => addLineMarker(coord));
+                }
+                
+                updateLineGeoJSON();
+                mapLine.fitBounds(layer.getBounds());
+            }
+        } catch(err) { 
+            console.error(err);
+            alert('GeoJSON Line Tidak Valid atau Format Tidak Didukung'); 
+        } 
+    };
+    r.readAsText(f); input.value = '';
+}
+
+function handleFileUploadPoint(input) {
+    const f = input.files[0]; if(!f) return;
+    const r = new FileReader();
+    r.onload = e => { 
+        try { 
+            const geo = JSON.parse(e.target.result);
+            // Handle GeoJSON structure to get coord
+            let lat, lng;
+            // Simple check for Point Geometry
+            if (geo.geometry && geo.geometry.type === 'Point') {
+                lng = geo.geometry.coordinates[0];
+                lat = geo.geometry.coordinates[1];
+            } else if (geo.type === 'Feature' && geo.geometry.type === 'Point') {
+                lng = geo.geometry.coordinates[0];
+                lat = geo.geometry.coordinates[1];
+            }
+            
+            if(lat && lng) {
+                setPointMarker([lat, lng]); // Pakai fungsi setPointMarker yg sdh ada
+                mapPoint.setView([lat, lng], 16);
+            }
+        } catch(err){ alert('GeoJSON Point Tidak Valid'); } 
+    };
+    r.readAsText(f); input.value = '';
 }
 
 // --- FUNGSI EXPORT GEOJSON (FIXED) ---

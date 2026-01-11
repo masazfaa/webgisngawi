@@ -451,7 +451,7 @@
 <div class="modal fade" id="modalGrup" tabindex="-1">
     <div class="modal-dialog modal-xl">
         <div class="modal-content border-0 shadow">
-            <form action="<?= base_url('geospasial/saveGrup') ?>" method="post">
+            <form action="<?= base_url('geospasial/saveGrup') ?>" method="post" enctype="multipart/form-data">
                 <div class="modal-header bg-light">
                     <h5 class="modal-title fw-bold">Konfigurasi Grup & Style</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -459,61 +459,81 @@
                 <div class="modal-body p-4">
                     <input type="hidden" name="id_dg" id="grup_id">
                     <input type="hidden" name="jenis_peta" id="grup_jenis_peta">
+                    
                     <div class="row">
                         <div class="col-md-4 border-end">
                             <div class="mb-3">
                                 <label class="form-label fw-bold small">Nama Kategori/Grup</label>
-                                <input type="text" name="nama_grup" id="grup_nama" class="form-control" required placeholder="Misal: Batas Administrasi">
+                                <input type="text" name="nama_grup" id="grup_nama" class="form-control" required placeholder="Misal: Kantor Pemerintahan">
                             </div>
 
                             <div class="mb-3 p-2 border rounded bg-light">
                                 <label class="form-label fw-bold small text-primary"><i class="fas fa-tag me-1"></i> Penamaan Dinamis</label>
                                 <select name="label_column" id="style_label_column" class="form-select form-select-sm shadow-sm">
                                     <option value="">-- Gunakan Nama Manual --</option>
-                                    </select>
-                                <small class="text-muted d-block mt-1" style="font-size: 0.65rem;">
-                                    Pilih atribut dari GeoJSON untuk dijadikan Nama Utama di tabel secara otomatis.
-                                </small>
+                                </select>
                             </div>
-                                <div class="mb-3">
-                                    <label class="form-label fw-bold small">Template Atribut</label>
-                                    
-                                    <div id="template_container" class="mb-2"></div>
 
-                                    <button type="button" class="btn btn-sm btn-outline-primary w-100" onclick="addTemplateRow()">
-                                        <i class="fas fa-plus me-1"></i> Tambah Kolom Template
-                                    </button>
-                                </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small">Template Atribut</label>
+                                <div id="template_container" class="mb-2"></div>
+                                <button type="button" class="btn btn-sm btn-outline-primary w-100" onclick="addTemplateRow()">
+                                    <i class="fas fa-plus me-1"></i> Tambah Kolom Template
+                                </button>
+                            </div>
                         </div>
+
                         <div class="col-md-4 border-end">
                             <h6 class="fw-bold mb-3 small">Visualisasi Peta</h6>
-                            <div class="row g-3">
-                                <div class="col-6"><label class="small text-muted">Stroke</label><input type="color" name="color" id="style_color" class="form-control form-control-color w-100" value="#3388ff"></div>
-                                <div class="col-6"><label class="small text-muted">Fill</label><input type="color" name="fillColor" id="style_fillColor" class="form-control form-control-color w-100" value="#3388ff"></div>
-                                <div class="col-6"><label class="small text-muted">Weight</label><input type="number" name="weight" id="style_weight" class="form-control" value="3"></div>
-                                <div class="col-12">
-                                        <label class="small text-muted fw-bold">Pola Garis (Dash Array)</label>
+                            
+                            <div id="point_style_options" class="mb-3 p-2 border rounded bg-light d-none">
+                                <label class="small fw-bold mb-2">Tipe Marker Point</label>
+                                <select name="marker_type" id="style_marker_type" class="form-select form-select-sm mb-2" onchange="toggleMarkerOptions()">
+                                    <option value="circle">Circle Marker (Bulat Warna)</option>
+                                    <option value="pin">Standard Pin (Leaflet Default)</option>
+                                    <option value="icon_url">Custom Icon (URL)</option>
+                                    <option value="icon_file">Custom Icon (Upload Gambar)</option>
+                                </select>
+
+                                <div id="input_icon_url" class="d-none animate__animated animate__fadeIn">
+                                    <input type="text" name="icon_url_input" id="style_icon_url" class="form-control form-control-sm" placeholder="https://example.com/icon.png">
+                                    <small class="text-muted" style="font-size: 10px;">Paste URL gambar (.png/.svg)</small>
+                                </div>
+
+                                <div id="input_icon_file" class="d-none animate__animated animate__fadeIn">
+                                    <input type="file" name="icon_file_input" id="style_icon_file" class="form-control form-control-sm" accept="image/*">
+                                    <small class="text-muted" style="font-size: 10px;">Upload icon (Max 2MB)</small>
+                                </div>
+                            </div>
+
+                            <div id="standard_style_container">
+                                <div class="row g-3">
+                                    <div class="col-6"><label class="small text-muted">Stroke</label><input type="color" name="color" id="style_color" class="form-control form-control-color w-100" value="#3388ff"></div>
+                                    <div class="col-6" id="cont_fillColor"><label class="small text-muted">Fill</label><input type="color" name="fillColor" id="style_fillColor" class="form-control form-control-color w-100" value="#3388ff"></div>
+                                    <div class="col-6"><label class="small text-muted">Weight/Size</label><input type="number" name="weight" id="style_weight" class="form-control" value="3"></div>
+                                    <div class="col-12" id="cont_dashArray">
+                                        <label class="small text-muted fw-bold">Pola Garis</label>
                                         <div class="input-group input-group-sm">
-                                            <input type="text" name="dashArray" id="style_dashArray" class="form-control" placeholder="Contoh: 5, 10" title="Masukkan angka dipisah koma (garis, jarak)">
+                                            <input type="text" name="dashArray" id="style_dashArray" class="form-control" placeholder="5, 10">
                                             <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">Presets</button>
                                             <ul class="dropdown-menu dropdown-menu-end">
-                                                <li><a class="dropdown-item" href="javascript:void(0)" onclick="setDashPreset('')">Solid (Garis Utuh)</a></li>
-                                                <li><a class="dropdown-item" href="javascript:void(0)" onclick="setDashPreset('5, 5')">Dashed (Putus-putus)</a></li>
-                                                <li><a class="dropdown-item" href="javascript:void(0)" onclick="setDashPreset('1, 10')">Dotted (Titik-titik)</a></li>
-                                                <li><a class="dropdown-item" href="javascript:void(0)" onclick="setDashPreset('10, 5, 1, 5')">Dash-Dot</a></li>
-                                                <li><hr class="dropdown-divider"></li>
-                                                <li><small class="dropdown-item text-muted" style="font-size: 10px;">Format: panjang_garis, jarak</small></li>
+                                                <li><a class="dropdown-item" onclick="setDashPreset('')">Solid</a></li>
+                                                <li><a class="dropdown-item" onclick="setDashPreset('5, 5')">Dashed</a></li>
                                             </ul>
                                         </div>
-                                        <small class="text-muted" style="font-size: 0.7rem;">Gunakan format angka dipisah koma untuk custom pola.</small>
                                     </div>
-                                <div class="col-6"><label class="small text-muted">Op. Stroke</label><input type="number" name="opacity" id="style_opacity" class="form-control" value="1" step="0.1" max="1"></div>
-                                <div class="col-6"><label class="small text-muted">Op. Fill</label><input type="number" name="fillOpacity" id="style_fillOpacity" class="form-control" value="0.2" step="0.1" max="1"></div>
+                                    <div class="col-6"><label class="small text-muted">Op. Stroke</label><input type="number" name="opacity" id="style_opacity" class="form-control" value="1" step="0.1" max="1"></div>
+                                    <div class="col-6" id="cont_fillOpacity"><label class="small text-muted">Op. Fill</label><input type="number" name="fillOpacity" id="style_fillOpacity" class="form-control" value="0.2" step="0.1" max="1"></div>
+                                </div>
                             </div>
                         </div>
+
                         <div class="col-md-4">
-                            <label class="fw-bold small mb-3">Preview</label>
+                            <label class="fw-bold small mb-3">Preview Style</label>
                             <div id="map_style_preview"></div>
+                            <div class="alert alert-info mt-2 p-2" style="font-size: 0.75rem;">
+                                <i class="fas fa-info-circle me-1"></i> Perubahan style akan diterapkan ke semua data dalam grup ini.
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -594,19 +614,17 @@
                     <div class="row">
                         <div class="col-md-4 border-end">
                             <div class="mb-3">
-                                <input type="text" name="nama_grup" class="form-control" required placeholder="Contoh: Batas Administrasi RT">
+                                <label class="form-label fw-bold small">Nama Grup Baru</label>
+                                <input type="text" name="nama_grup" class="form-control" required placeholder="Contoh: Batas Wilayah">
                             </div>
-                                <div class="mb-3">
-                                    <label class="form-label fw-bold small">Pilih File GeoJSON</label>
-                                    <input type="file" id="import_file_input" name="file_geojson" class="form-control" accept=".json,.geojson" required onchange="analyzeGeoJSON(this)">
-                                </div>
-
-                                <div id="column_mapping_container" class="mb-3 d-none">
-                                    <label class="form-label fw-bold small text-success"><i class="fas fa-table me-1"></i> Pilih Kolom Nama Lokasi</label>
-                                    <select name="column_name_map" id="column_name_map" class="form-select form-select-sm shadow-sm border-success">
-                                        </select>
-                                    <small class="text-muted" style="font-size: 0.7rem;">Pilih atribut dari file yang akan dijadikan nama identitas poligon.</small>
-                                </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small">Pilih File GeoJSON</label>
+                                <input type="file" id="import_file_input" name="file_geojson" class="form-control" accept=".json,.geojson" required onchange="analyzeGeoJSON(this)">
+                            </div>
+                            <div id="column_mapping_container" class="mb-3 d-none">
+                                <label class="form-label fw-bold small text-success"><i class="fas fa-table me-1"></i> Pilih Kolom Nama Lokasi</label>
+                                <select name="column_name_map" id="column_name_map" class="form-select form-select-sm shadow-sm border-success"></select>
+                            </div>
                             <div id="importProgressContainer" class="d-none mt-4 p-3 border rounded bg-light">
                                 <label class="small fw-bold mb-1 d-block text-primary"><i class="fas fa-spinner fa-spin me-1"></i> Memproses Data...</label>
                                 <div class="progress" style="height: 15px;">
@@ -618,33 +636,50 @@
 
                         <div class="col-md-4 border-end">
                             <h6 class="fw-bold mb-3 small">Visualisasi Peta</h6>
-                            <div class="row g-3">
-                                <div class="col-6"><label class="small text-muted">Stroke</label><input type="color" name="color" id="import_style_color" class="form-control form-control-color w-100" value="#4f46e5"></div>
-                                <div class="col-6"><label class="small text-muted">Fill</label><input type="color" name="fillColor" id="import_style_fillColor" class="form-control form-control-color w-100" value="#4f46e5"></div>
-                                <div class="col-6"><label class="small text-muted">Weight</label><input type="number" name="weight" id="import_style_weight" class="form-control" value="2"></div>
-                                <div class="col-12">
-                                    <label class="small text-muted fw-bold">Pola Garis</label>
-                                    <div class="input-group input-group-sm">
-                                        <input type="text" name="dashArray" id="import_style_dashArray" class="form-control" placeholder="Contoh: 5, 10">
-                                        <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">Presets</button>
-                                        <ul class="dropdown-menu dropdown-menu-end">
-                                            <li><a class="dropdown-item" href="javascript:void(0)" onclick="setImportDashPreset('')">Solid</a></li>
-                                            <li><a class="dropdown-item" href="javascript:void(0)" onclick="setImportDashPreset('5, 5')">Dashed</a></li>
-                                            <li><a class="dropdown-item" href="javascript:void(0)" onclick="setImportDashPreset('1, 10')">Dotted</a></li>
-                                            <li><a class="dropdown-item" href="javascript:void(0)" onclick="setImportDashPreset('10, 5, 1, 5')">Dash-Dot</a></li>
-                                            <li><hr class="dropdown-divider"></li>
-                                            <li><small class="dropdown-item text-muted" style="font-size: 10px;">Format: panjang_garis, jarak</small></li>
-                                        </ul>
-                                    </div>
+                            
+                            <div id="import_point_options" class="mb-3 p-2 border rounded bg-light d-none">
+                                <label class="small fw-bold mb-2">Tipe Marker</label>
+                                <select name="marker_type" id="import_marker_type" class="form-select form-select-sm mb-2" onchange="refreshImportPreview(true)">
+                                    <option value="circle">Circle Marker (Bulat Warna)</option>
+                                    <option value="pin">Standard Pin (Leaflet Default)</option>
+                                    <option value="icon_url">Custom Icon (URL)</option>
+                                    <option value="icon_file">Custom Icon (Upload Gambar)</option>
+                                </select>
+
+                                <div id="cont_import_icon_url" class="d-none">
+                                    <input type="text" name="icon_url_input" id="import_icon_url" class="form-control form-control-sm" placeholder="https://example.com/icon.png">
                                 </div>
-                                <div class="col-6"><label class="small text-muted">Op. Stroke</label><input type="number" name="opacity" id="import_style_opacity" class="form-control" value="1" step="0.1" max="1"></div>
-                                <div class="col-6"><label class="small text-muted">Op. Fill</label><input type="number" name="fillOpacity" id="import_style_fillOpacity" class="form-control" value="0.2" step="0.1" max="1"></div>
+                                <div id="cont_import_icon_file" class="d-none">
+                                    <input type="file" name="icon_file_input" id="import_icon_file" class="form-control form-control-sm" accept="image/*">
+                                </div>
+                            </div>
+
+                            <div id="import_standard_style">
+                                <div class="row g-3">
+                                    <div class="col-6"><label class="small text-muted">Stroke</label><input type="color" name="color" id="import_style_color" class="form-control form-control-color w-100" value="#4f46e5"></div>
+                                    <div class="col-6" id="cont_imp_fill"><label class="small text-muted">Fill</label><input type="color" name="fillColor" id="import_style_fillColor" class="form-control form-control-color w-100" value="#4f46e5"></div>
+                                    <div class="col-6"><label class="small text-muted">Weight</label><input type="number" name="weight" id="import_style_weight" class="form-control" value="2"></div>
+                                    <div class="col-12" id="cont_imp_dash">
+                                        <label class="small text-muted fw-bold">Pola Garis</label>
+                                        <div class="input-group input-group-sm">
+                                            <input type="text" name="dashArray" id="import_style_dashArray" class="form-control" placeholder="5, 10">
+                                            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">Presets</button>
+                                            <ul class="dropdown-menu dropdown-menu-end">
+                                                <li><a class="dropdown-item" onclick="setImportDashPreset('')">Solid</a></li>
+                                                <li><a class="dropdown-item" onclick="setImportDashPreset('5, 5')">Dashed</a></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <div class="col-6"><label class="small text-muted">Op. Stroke</label><input type="number" name="opacity" id="import_style_opacity" class="form-control" value="1" step="0.1" max="1"></div>
+                                    <div class="col-6" id="cont_imp_fillOp"><label class="small text-muted">Op. Fill</label><input type="number" name="fillOpacity" id="import_style_fillOpacity" class="form-control" value="0.2" step="0.1" max="1"></div>
+                                </div>
                             </div>
                         </div>
 
                         <div class="col-md-4">
-                            <label class="fw-bold small mb-3">Preview</label>
+                            <label class="fw-bold small mb-3">Preview Style</label>
                             <div id="map_import_preview" style="height: 250px; width: 100%; border-radius: 12px; border: 2px solid var(--slate-100);"></div>
+                            <small class="text-muted d-block mt-2" style="font-size: 0.7rem;">Style ini akan diterapkan ke grup baru.</small>
                         </div>
                     </div>
                 </div>
@@ -881,49 +916,282 @@ function deleteGrup(id) { if(confirm('Hapus seluruh grup dan datanya?')) window.
 function deleteData(t, id) { if(confirm('Hapus entitas ini?')) window.location.href = `<?= base_url('geospasial/delete') ?>/${t}/${id}`; }
 
 // --- BAGIAN 1: LOGIKA GRUP & PREVIEW ---
+// --- VARIABEL GLOBAL ---
+let markerMap;      // Map KHUSUS untuk Marker/Point (Baru)
+let previewLayer;   // Layer object (untuk update style ringan)
+let tempIconUrl = null; 
+
+// --- 1. MODAL OPENER (ROUTER UTAMA) ---
 function openGrupModal(data = null, type = 'Polygon') {
     const modalEl = document.getElementById('modalGrup');
     const form = modalEl.querySelector('form');
     
+    // Reset Form
     form.reset();
     document.getElementById('template_container').innerHTML = '';
-    
-    // Set Tipe
+    tempIconUrl = null;
+
+    // Set Tipe & ID
     currentGrupType = (data && data.jenis_peta) ? data.jenis_peta : type;
     document.getElementById('grup_jenis_peta').value = currentGrupType;
+    document.getElementById('grup_id').value = data ? data.id_dg : '';
+    if(data) document.getElementById('grup_nama').value = data.nama_grup;
 
-    const labelSelect = document.getElementById('style_label_column');
-    labelSelect.innerHTML = '<option value="">-- Gunakan Nama Manual --</option>';
+    // Toggle Input UI (Fungsi Helper)
+    toggleMarkerOptions(); 
 
-    let style = { color: '#3388ff', weight: 3, opacity: 1, fillColor: '#3388ff', fillOpacity: 0.2, dashArray: '', radius: 10 };
+    // Default Style
+    let style = { 
+        color: '#3388ff', weight: 3, opacity: 1, 
+        fillColor: '#3388ff', fillOpacity: 0.2, 
+        dashArray: '', radius: 10,
+        marker_type: 'circle', marker_icon: ''
+    };
 
+    // Override jika Edit Data
     if(data) {
-        document.getElementById('grup_id').value = data.id_dg;
-        document.getElementById('grup_nama').value = data.nama_grup;
-        style = { 
-            color: data.color, weight: data.weight, opacity: data.opacity, 
-            fillColor: data.fillColor, fillOpacity: data.fillOpacity, 
-            dashArray: data.dashArray || '', radius: data.radius || 10
-        };
+        style.color = data.color;
+        style.weight = data.weight;
+        style.opacity = data.opacity;
+        style.fillColor = data.fillColor;
+        style.fillOpacity = data.fillOpacity;
+        style.dashArray = data.dashArray;
+        style.radius = data.radius || 10;
+        style.marker_type = data.marker_type || 'circle';
+        style.marker_icon = data.marker_icon || '';
         
+        // Load Template Atribut
         try { JSON.parse(data.atribut_default).forEach(x => addTemplateRow(x.label)); } catch(e){}
     } else {
-        document.getElementById('grup_id').value = '';
-        addTemplateRow(); 
+        addTemplateRow(); // Default row
     }
 
-    // Hide Style yang tidak perlu
-    const fillContainer = document.getElementById('style_fillColor').closest('.col-6');
-    const fillOpContainer = document.getElementById('style_fillOpacity').closest('.col-6');
-    fillContainer.style.display = (currentGrupType === 'Line') ? 'none' : 'block';
-    fillOpContainer.style.display = (currentGrupType === 'Line') ? 'none' : 'block';
-
-    Object.keys(style).forEach(key => { 
-        if(document.getElementById('style_'+key)) document.getElementById('style_'+key).value = style[key]; 
+    // Set Nilai Form
+    const fields = ['color', 'fillColor', 'weight', 'opacity', 'fillOpacity', 'dashArray'];
+    fields.forEach(f => {
+        if(document.getElementById('style_' + f)) document.getElementById('style_' + f).value = style[f];
     });
 
+    // Set Nilai Marker Khusus
+    if(document.getElementById('style_marker_type')) {
+        document.getElementById('style_marker_type').value = style.marker_type;
+    }
+    if (style.marker_type === 'icon_url') {
+        document.getElementById('style_icon_url').value = style.marker_icon;
+    }
+
+    // Tampilkan Modal
     bootstrap.Modal.getOrCreateInstance(modalEl).show();
-    modalEl.addEventListener('shown.bs.modal', () => initStyleMap(style, currentGrupType), { once: true });
+
+    // --- LOGIKA PEMISAH (ROUTER) ---
+    modalEl.addEventListener('shown.bs.modal', () => {
+        if (currentGrupType === 'Point') {
+            // Panggil Fungsi KHUSUS Marker
+            initMarkerPreviewMap(style); 
+        } else {
+            // Panggil Fungsi LAMA (Poly/Line)
+            initStyleMap(style, currentGrupType);
+        }
+    }, { once: true });
+}
+
+// --- 2. FUNGSI KHUSUS PREVIEW MARKER (BARU) ---
+function initMarkerPreviewMap(style) {
+    // Bersihkan container map dari instance leaflet manapun
+    cleanMapContainer();
+
+    // Init Peta Baru
+    markerMap = L.map('map_style_preview', { zoomControl: false, attributionControl: false }).setView(DEFAULT_COORD, 15);
+    L.tileLayer(GOOGLE_SAT_URL).addTo(markerMap);
+
+    const mType = document.getElementById('style_marker_type').value;
+
+    // A. LOGIKA CIRCLE
+    if (mType === 'circle') {
+        previewLayer = L.circleMarker(DEFAULT_COORD, { 
+            color: style.color, 
+            weight: parseInt(style.weight),
+            opacity: parseFloat(style.opacity),
+            fillColor: style.fillColor,
+            fillOpacity: parseFloat(style.fillOpacity),
+            radius: 10 
+        }).addTo(markerMap);
+    } 
+    // B. LOGIKA PIN STANDAR
+    else if (mType === 'pin') {
+        previewLayer = L.marker(DEFAULT_COORD).addTo(markerMap);
+    } 
+    // C. LOGIKA CUSTOM ICON (URL/FILE)
+    else {
+        let iconSrc = 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png';
+        
+        if (tempIconUrl) {
+            iconSrc = tempIconUrl; // Dari upload sementara
+        } else if (mType === 'icon_url' && document.getElementById('style_icon_url').value) {
+            iconSrc = document.getElementById('style_icon_url').value;
+        } else if (style.marker_icon) {
+            // Dari database (saat edit)
+            iconSrc = style.marker_icon.startsWith('http') ? style.marker_icon : `<?= base_url('uploads/icons') ?>/${style.marker_icon}`;
+        }
+
+        const customIcon = L.icon({
+            iconUrl: iconSrc, 
+            iconSize: [32, 32], 
+            iconAnchor: [16, 32],
+            popupAnchor: [0, -32]
+        });
+        previewLayer = L.marker(DEFAULT_COORD, { icon: customIcon }).addTo(markerMap);
+    }
+
+    // Setup Listeners khusus Marker
+    setupStyleListeners();
+    
+    // Fix Blank Map
+    setTimeout(() => { markerMap.invalidateSize(); }, 300);
+}
+
+// --- 4. HELPER MEMBERSIHKAN PETA (PENTING) ---
+function cleanMapContainer() {
+    // Hapus map instance global manapun yang sedang aktif di div 'map_style_preview'
+    if (styleMap) { styleMap.off(); styleMap.remove(); styleMap = null; }
+    if (markerMap) { markerMap.off(); markerMap.remove(); markerMap = null; }
+}
+
+// --- 5. REFRESHER & LISTENERS ---
+function refreshPreview() {
+    const style = {
+        color: document.getElementById('style_color').value,
+        weight: parseInt(document.getElementById('style_weight').value),
+        opacity: parseFloat(document.getElementById('style_opacity').value),
+        fillColor: document.getElementById('style_fillColor').value,
+        fillOpacity: parseFloat(document.getElementById('style_fillOpacity').value),
+        dashArray: document.getElementById('style_dashArray').value,
+        marker_type: document.getElementById('style_marker_type').value,
+        marker_icon: document.getElementById('style_icon_url') ? document.getElementById('style_icon_url').value : ''
+    };
+
+    // Router lagi saat ada perubahan input
+    if (currentGrupType === 'Point') {
+        initMarkerPreviewMap(style);
+    } else {
+        initStyleMap(style, currentGrupType);
+    }
+}
+
+function updateMapStyle() {
+    // Fungsi ringan: Hanya update CSS style tanpa gambar ulang peta
+    // Cocok untuk Slider Opacity / Color Picker
+    if(previewLayer && typeof previewLayer.setStyle === 'function') {
+        previewLayer.setStyle({
+            color: document.getElementById('style_color').value,
+            weight: parseInt(document.getElementById('style_weight').value),
+            opacity: parseFloat(document.getElementById('style_opacity').value),
+            fillColor: document.getElementById('style_fillColor').value,
+            fillOpacity: parseFloat(document.getElementById('style_fillOpacity').value),
+            dashArray: document.getElementById('style_dashArray').value
+        });
+    }
+}
+
+function setupStyleListeners() {
+    // 1. Listener Input Standar
+    ['style_color', 'style_weight', 'style_opacity', 'style_fillColor', 'style_fillOpacity', 'style_dashArray'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el) {
+            const newEl = el.cloneNode(true); // Bersihkan listener lama
+            el.parentNode.replaceChild(newEl, el);
+            
+            newEl.addEventListener('input', () => {
+                // Jika Circle atau Poly/Line, pakai update ringan
+                const mType = document.getElementById('style_marker_type').value;
+                if (currentGrupType !== 'Point' || mType === 'circle') {
+                    updateMapStyle();
+                } else {
+                    refreshPreview(); // Icon butuh refresh total
+                }
+            });
+        }
+    });
+
+    // 2. Listener Khusus Point (Marker Type)
+    const elType = document.getElementById('style_marker_type');
+    if(elType) {
+        const newElType = elType.cloneNode(true);
+        elType.parentNode.replaceChild(newElType, elType);
+        newElType.addEventListener('change', () => {
+            toggleMarkerOptions();
+            refreshPreview();
+        });
+    }
+
+    // 3. Listener File Upload
+    const elFile = document.getElementById('style_icon_file');
+    if(elFile) {
+        const newElFile = elFile.cloneNode(true);
+        elFile.parentNode.replaceChild(newElFile, elFile);
+        newElFile.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if(file) {
+                tempIconUrl = URL.createObjectURL(file);
+                refreshPreview();
+            }
+        });
+    }
+    
+    // 4. Listener URL
+    const elUrl = document.getElementById('style_icon_url');
+    if(elUrl) {
+        const newElUrl = elUrl.cloneNode(true);
+        elUrl.parentNode.replaceChild(newElUrl, elUrl);
+        newElUrl.addEventListener('input', refreshPreview);
+    }
+}
+
+// UI HELPER
+function toggleMarkerOptions() {
+    const type = currentGrupType;
+    const markerType = document.getElementById('style_marker_type').value;
+
+    const contStandard = document.getElementById('standard_style_container');
+    const inputUrl = document.getElementById('input_icon_url');
+    const inputFile = document.getElementById('input_icon_file');
+    const elFill = document.getElementById('cont_fillColor');
+    const elFillOp = document.getElementById('cont_fillOpacity');
+    const elDash = document.getElementById('cont_dashArray');
+    const pointOptions = document.getElementById('point_style_options');
+
+    // Reset visibility
+    inputUrl.classList.add('d-none');
+    inputFile.classList.add('d-none');
+    contStandard.classList.remove('d-none');
+    pointOptions.classList.add('d-none');
+
+    if (type === 'Point') {
+        pointOptions.classList.remove('d-none');
+        elDash.classList.add('d-none');
+
+        if (markerType === 'circle') {
+            elFill.classList.remove('d-none');
+            elFillOp.classList.remove('d-none');
+        } else if (markerType === 'pin') {
+            contStandard.classList.add('d-none');
+        } else if (markerType === 'icon_url') {
+            inputUrl.classList.remove('d-none');
+            contStandard.classList.add('d-none');
+        } else if (markerType === 'icon_file') {
+            inputFile.classList.remove('d-none');
+            contStandard.classList.add('d-none');
+        }
+    } else if (type === 'Line') {
+        elFill.classList.add('d-none');
+        elFillOp.classList.add('d-none');
+        elDash.classList.remove('d-none');
+    } else {
+        // Polygon
+        elFill.classList.remove('d-none');
+        elFillOp.classList.remove('d-none');
+        elDash.classList.remove('d-none');
+    }
 }
 
 function addTemplateRow(val = '') {
@@ -1300,17 +1568,20 @@ function openAddPoint(grupId, grupData) {
 }
 
 function openEditPoint(item, grupData) {
-    // PERBAIKAN: Gunakan 'item.id', bukan 'id'
+    const btn = document.activeElement; 
+    if(btn && btn.tagName === 'BUTTON') btn.style.pointerEvents = 'none';
+
     fetch('<?= base_url("geospasial/getDetail/point") ?>/' + item.id, {
         headers: { "X-Requested-With": "XMLHttpRequest" }
     })
     .then(r => r.json())
     .then(data => {
+        // --- 1. ISI FORM ---
         document.getElementById('point_id').value = data.id;
         document.getElementById('point_id_grup').value = grupData.id_dg;
         document.getElementById('point_nama').value = data.nama_dg;
 
-        // Load PDF
+        // --- 2. ISI PDF ---
         const pdfContainer = document.getElementById('point_pdf_list');
         pdfContainer.innerHTML = '';
         if(data.daftar_pdf) {
@@ -1325,67 +1596,110 @@ function openEditPoint(item, grupData) {
             });
         }
 
-        // Load Atribut
+        // --- 3. ISI ATRIBUT ---
         document.getElementById('point_attr_area').innerHTML = '';
         try { JSON.parse(data.atribut_tambahan).forEach(x => addAttrRow('point', x.label, x.value)); } catch(e) {}
 
-        // Load Map
-        if(data.data_geospasial) {
-            try {
-                var geo = JSON.parse(data.data_geospasial);
-                // Handle struktur GeoJSON Point
-                var lng, lat;
-                if (geo.geometry && geo.geometry.coordinates) {
-                    lng = geo.geometry.coordinates[0];
-                    lat = geo.geometry.coordinates[1];
-                } else if (geo.coordinates) {
-                    lng = geo.coordinates[0];
-                    lat = geo.coordinates[1];
-                }
-
-                if(lat && lng) {
-                    setPointMarker([lat, lng]);
-                    mapPoint.setView([lat, lng], 15);
-                }
-            } catch(e) { console.error(e); }
-        }
-
-        var myModal = new bootstrap.Modal(document.getElementById('modalDataPoint'));
+        // --- 4. TAMPILKAN MODAL ---
+        const modalEl = document.getElementById('modalDataPoint');
+        const myModal = new bootstrap.Modal(modalEl);
         myModal.show();
 
-        document.getElementById('modalDataPoint').addEventListener('shown.bs.modal', function(){
-            mapPoint.invalidateSize();
-        }, {once:true});
+        // --- 5. RENDER PETA (SOLUSI FIX) ---
+        // Definisi fungsi handler agar bisa dihapus
+        const handleShown = function() {
+            initDrawPointMap(data.data_geospasial); // Init Peta
+            modalEl.removeEventListener('shown.bs.modal', handleShown); // Hapus listener segera
+        };
+        
+        // Pasang listener
+        modalEl.addEventListener('shown.bs.modal', handleShown);
+
+    })
+    .catch(err => {
+        console.error("Error:", err);
+        alert("Gagal memuat data titik.");
+    })
+    .finally(() => {
+        if(btn && btn.tagName === 'BUTTON') btn.style.pointerEvents = 'auto';
     });
 }
 
 // Map Engine Khusus Point (Google Sat)
 function initDrawPointMap(jsonStr = null) {
-    if (mapPoint) mapPoint.remove();
-    mapPoint = L.map('map_draw_point').setView(DEFAULT_COORD, 13);
-    L.tileLayer(GOOGLE_SAT_URL).addTo(mapPoint); // FIX: Google Sat
-    
-    drawPointLayer = null;
-
-    if(jsonStr) {
-        try {
-            var geo = JSON.parse(jsonStr);
-            var lng = geo.geometry.coordinates[0];
-            var lat = geo.geometry.coordinates[1];
-            setPointMarker([lat, lng]);
-            mapPoint.setView([lat, lng], 16);
-        } catch(e) {}
+    // 1. Reset Peta Lama (PENTING)
+    if (typeof mapPoint !== 'undefined' && mapPoint !== null) {
+        mapPoint.off();
+        mapPoint.remove();
+        mapPoint = null;
     }
 
-    mapPoint.on('click', function(e) { setPointMarker(e.latlng); });
-}
+    // 2. Cek Container
+    const container = document.getElementById('map_draw_point');
+    if(!container) return;
 
-function setPointMarker(latlng) {
-    if (drawPointLayer) mapPoint.removeLayer(drawPointLayer);
-    drawPointLayer = L.marker(latlng, {draggable: true}).addTo(mapPoint);
-    document.getElementById('point_geojson').value = JSON.stringify(drawPointLayer.toGeoJSON());
-    drawPointLayer.on('dragend', function(e) {
-        document.getElementById('point_geojson').value = JSON.stringify(e.target.toGeoJSON());
+    // 3. Buat Instance Peta Baru
+    mapPoint = L.map('map_draw_point', {
+        zoomControl: true,
+        attributionControl: false
+    });
+
+    L.tileLayer(GOOGLE_SAT_URL).addTo(mapPoint);
+    
+    // 4. Reset Marker Global
+    drawPointLayer = null;
+
+    // 5. Parsing Data GeoJSON (Jika Edit Mode)
+    let initialLat = DEFAULT_COORD[0];
+    let initialLng = DEFAULT_COORD[1];
+    let hasData = false;
+
+    if(jsonStr && jsonStr !== "null" && jsonStr !== "") {
+        try {
+            const geo = JSON.parse(jsonStr);
+            // Handle struktur: FeatureCollection, Feature, atau Geometry
+            let coords = null;
+
+            if (geo.type === 'FeatureCollection' && geo.features.length > 0) {
+                const ft = geo.features.find(f => f.geometry.type === 'Point');
+                if(ft) coords = ft.geometry.coordinates;
+            } 
+            else if (geo.type === 'Feature' && geo.geometry.type === 'Point') {
+                coords = geo.geometry.coordinates;
+            }
+            else if (geo.type === 'Point') {
+                coords = geo.coordinates; // Raw geometry
+            }
+            else if (geo.geometry && geo.geometry.coordinates) {
+                coords = geo.geometry.coordinates; // Struktur simple
+            }
+
+            if(coords) {
+                // GeoJSON = [Lng, Lat]
+                initialLng = coords[0];
+                initialLat = coords[1];
+                hasData = true;
+            }
+        } catch(e) { console.error("Error GeoJSON Parsing", e); }
+    }
+
+    // 6. FIX TAMPILAN (ANTI BLANK)
+    setTimeout(() => {
+        if(mapPoint) {
+            mapPoint.invalidateSize(); // Paksa hitung ulang ukuran
+
+            if (hasData) {
+                mapPoint.setView([initialLat, initialLng], 18);
+                setPointMarker([initialLat, initialLng]);
+            } else {
+                mapPoint.setView(DEFAULT_COORD, 13);
+            }
+        }
+    }, 300); // Jeda 300ms agar modal stabil
+
+    // 7. Listener Klik Peta
+    mapPoint.on('click', function(e) { 
+        setPointMarker(e.latlng); 
     });
 }
 
@@ -1438,30 +1752,88 @@ function handleFileUploadLine(input) {
     r.readAsText(f); input.value = '';
 }
 
+function setPointMarker(latlng) {
+    if (!mapPoint) return;
+
+    // Hapus marker lama
+    if (drawPointLayer) {
+        mapPoint.removeLayer(drawPointLayer);
+    }
+
+    // Pasang marker baru (latlng bisa berupa array [lat, lng] atau object {lat:.., lng:..})
+    drawPointLayer = L.marker(latlng, {draggable: true}).addTo(mapPoint);
+    
+    // Simpan ke Input Hidden (Format GeoJSON standar)
+    const geoJsonData = drawPointLayer.toGeoJSON();
+    document.getElementById('point_geojson').value = JSON.stringify(geoJsonData);
+    
+    // Listener Drag
+    drawPointLayer.on('dragend', function(e) {
+        document.getElementById('point_geojson').value = JSON.stringify(e.target.toGeoJSON());
+    });
+}
+
 function handleFileUploadPoint(input) {
-    const f = input.files[0]; if(!f) return;
+    const f = input.files[0]; 
+    if(!f) return;
+
     const r = new FileReader();
     r.onload = e => { 
         try { 
             const geo = JSON.parse(e.target.result);
-            // Handle GeoJSON structure to get coord
             let lat, lng;
-            // Simple check for Point Geometry
-            if (geo.geometry && geo.geometry.type === 'Point') {
-                lng = geo.geometry.coordinates[0];
-                lat = geo.geometry.coordinates[1];
-            } else if (geo.type === 'Feature' && geo.geometry.type === 'Point') {
-                lng = geo.geometry.coordinates[0];
-                lat = geo.geometry.coordinates[1];
-            }
+
+            // --- LOGIKA DETEKSI POINT (FeatureCollection Support) ---
             
-            if(lat && lng) {
-                setPointMarker([lat, lng]); // Pakai fungsi setPointMarker yg sdh ada
-                mapPoint.setView([lat, lng], 16);
+            // Kasus 1: FeatureCollection (Data Anda masuk sini)
+            if (geo.type === 'FeatureCollection' && geo.features && geo.features.length > 0) {
+                // Cari feature pertama yg tipenya Point
+                const pointFeature = geo.features.find(ft => ft.geometry && ft.geometry.type === 'Point');
+                if (pointFeature) {
+                    lng = pointFeature.geometry.coordinates[0];
+                    lat = pointFeature.geometry.coordinates[1];
+                }
+            } 
+            // Kasus 2: Single Feature
+            else if (geo.type === 'Feature' && geo.geometry && geo.geometry.type === 'Point') {
+                lng = geo.geometry.coordinates[0];
+                lat = geo.geometry.coordinates[1];
             }
-        } catch(err){ alert('GeoJSON Point Tidak Valid'); } 
+            // Kasus 3: Raw Geometry
+            else if (geo.type === 'Point' && geo.coordinates) {
+                lng = geo.coordinates[0];
+                lat = geo.coordinates[1];
+            }
+
+            // --- EKSEKUSI ---
+            if (lat !== undefined && lng !== undefined) {
+                if (!mapPoint) {
+                    alert("Peta belum siap. Coba ulangi setelah peta muncul.");
+                    return;
+                }
+
+                // Leaflet butuh [Lat, Lng]
+                const newLatLng = [lat, lng];
+                
+                // Update Marker & Zoom
+                setPointMarker(newLatLng); 
+                mapPoint.setView(newLatLng, 18);
+                
+                // Opsional: Ambil properti nama jika ada
+                // (Anda bisa mengembangkan ini untuk auto-fill input nama)
+                
+            } else {
+                alert('Format GeoJSON valid, tapi tidak ditemukan koordinat Point di dalamnya.');
+            }
+
+        } catch(err) { 
+            console.error(err);
+            alert('File GeoJSON rusak atau format tidak dikenali.'); 
+        } 
     };
-    r.readAsText(f); input.value = '';
+    
+    r.readAsText(f); 
+    input.value = ''; // Reset input file
 }
 
 // --- FUNGSI EXPORT GEOJSON (FIXED) ---
@@ -1595,7 +1967,6 @@ function analyzeGeoJSON(input) {
 // ==========================================================
 // LOGIKA IMPORT GRUP (UPDATE SUPPORT LINE & POINT)
 // ==========================================================
-let currentImportType = 'Polygon'; // Default
 
 // Menerima parameter 'type' dari tombol HTML
 function openImportGrupModal(type = 'Polygon') {
@@ -1713,5 +2084,251 @@ function setDashPreset(val) {
         input.value = val;
         input.dispatchEvent(new Event('input'));
     }
+}
+
+// ==========================================================
+// LOGIKA IMPORT GRUP (TERPISAH & STABIL)
+// ==========================================================
+
+let importMap;       // Instance Map Leaflet
+let importLayer;     // Layer Object (untuk update ringan)
+let currentImportType = 'Polygon'; 
+let tempImportIconUrl = null;
+
+// 1. OPEN MODAL
+function openImportGrupModal(type = 'Polygon') {
+    const modalEl = document.getElementById('modalImportGrup');
+    const modal = new bootstrap.Modal(modalEl);
+    
+    currentImportType = type;
+    tempImportIconUrl = null;
+
+    // UI Reset
+    const titleEl = modalEl.querySelector('.modal-title');
+    if(titleEl) titleEl.innerText = `Import GeoJSON Grup (${type})`;
+    document.getElementById('formImportGrup').reset();
+    document.getElementById('importProgressContainer').classList.add('d-none');
+    document.getElementById('column_mapping_container').classList.add('d-none');
+    
+    // Set Marker Default
+    if(document.getElementById('import_marker_type')) {
+        document.getElementById('import_marker_type').value = 'circle';
+    }
+
+    // Toggle Input UI
+    toggleImportUI();
+
+    modal.show();
+
+    // Render Peta saat modal muncul (Sekali saja)
+    const onShown = function() {
+        // Init Full Map (Reset Total)
+        refreshImportPreview(true);
+        modalEl.removeEventListener('shown.bs.modal', onShown);
+    };
+    modalEl.addEventListener('shown.bs.modal', onShown);
+}
+
+// 2. TOGGLE UI (HIDE/SHOW INPUT)
+function toggleImportUI() {
+    const type = currentImportType;
+    const markerType = document.getElementById('import_marker_type').value;
+
+    const contPoint     = document.getElementById('import_point_options');
+    const contStd       = document.getElementById('import_standard_style');
+    const inputUrl      = document.getElementById('cont_import_icon_url');
+    const inputFile     = document.getElementById('cont_import_icon_file');
+    
+    // Style Elements
+    const elFill   = document.getElementById('cont_imp_fill');
+    const elFillOp = document.getElementById('cont_imp_fillOp');
+    const elDash   = document.getElementById('cont_imp_dash');
+
+    // Reset Display
+    inputUrl.classList.add('d-none');
+    inputFile.classList.add('d-none');
+    contStd.classList.remove('d-none'); 
+    contPoint.classList.add('d-none');
+
+    if (type === 'Point') {
+        contPoint.classList.remove('d-none'); 
+        elDash.classList.add('d-none'); 
+
+        if (markerType === 'circle') {
+            elFill.classList.remove('d-none');
+            elFillOp.classList.remove('d-none');
+        } else if (markerType === 'pin') {
+            contStd.classList.add('d-none'); 
+        } else {
+            // Icon URL/File
+            contStd.classList.add('d-none'); 
+            if (markerType === 'icon_url') inputUrl.classList.remove('d-none');
+            if (markerType === 'icon_file') inputFile.classList.remove('d-none');
+        }
+    } else if (type === 'Line') {
+        elFill.classList.add('d-none');
+        elFillOp.classList.add('d-none');
+        elDash.classList.remove('d-none');
+    } else {
+        // Polygon
+        elFill.classList.remove('d-none');
+        elFillOp.classList.remove('d-none');
+        elDash.classList.remove('d-none');
+    }
+}
+
+// 3. ROUTER UTAMA (VERSI CERDAS/OPTIMIZED)
+function refreshImportPreview(forceReinit = false) {
+    const style = getImportStyleValues(); // Helper ambil value input
+    
+    // --- LOGIKA POINT (MARKER) ---
+    if (currentImportType === 'Point') {
+        const markerType = document.getElementById('import_marker_type').value;
+        
+        // OPTIMASI: Jika tipe Circle dan map sudah ada, update ringan saja (biar slider smooth)
+        if (!forceReinit && importMap && importLayer && markerType === 'circle' && importLayer instanceof L.CircleMarker) {
+            importLayer.setStyle(style); // Update ringan (ganti warna/radius)
+        } 
+        else {
+            // Jika ganti tipe (misal dari Circle ke Pin), atau Pin ke Icon, wajib Re-init
+            initImportMarkerMap(); 
+        }
+    } 
+    // --- LOGIKA LINE & POLYGON ---
+    else {
+        if (forceReinit || !importMap) {
+            initImportPolyLineMap(); // Buat Baru (saat modal buka)
+        } else {
+            updateImportPolyLineStyle(); // Update Ringan (saat geser slider)
+        }
+    }
+}
+
+// 4. MAP ENGINE: POLYGON & LINE (STABIL & RINGAN)
+function initImportPolyLineMap() {
+    // Reset Total
+    if (typeof importMap !== 'undefined' && importMap !== null) {
+        importMap.off(); importMap.remove(); importMap = null;
+    }
+    
+    if(!document.getElementById('map_import_preview')) return;
+
+    importMap = L.map('map_import_preview', { zoomControl: false, attributionControl: false }).setView(DEFAULT_COORD, 13);
+    L.tileLayer(GOOGLE_SAT_URL).addTo(importMap);
+    
+    // Ambil Style Awal
+    const style = getImportStyleValues();
+
+    if (currentImportType === 'Line') {
+        const coords = [[DEFAULT_COORD[0], DEFAULT_COORD[1]-0.02], [DEFAULT_COORD[0]+0.01, DEFAULT_COORD[1]], [DEFAULT_COORD[0], DEFAULT_COORD[1]+0.02]];
+        importLayer = L.polyline(coords, style).addTo(importMap);
+    } else {
+        // Polygon
+        const coords = [[DEFAULT_COORD[0] + 0.005, DEFAULT_COORD[1] - 0.005], [DEFAULT_COORD[0] - 0.005, DEFAULT_COORD[1] + 0.005], [DEFAULT_COORD[0] - 0.005, DEFAULT_COORD[1] - 0.005]];
+        importLayer = L.polygon(coords, style).addTo(importMap);
+    }
+    
+    importMap.fitBounds(importLayer.getBounds(), { padding: [20, 20] });
+    
+    setupImportListeners(); 
+    setTimeout(() => { importMap.invalidateSize(); }, 300);
+}
+
+// FUNGSI UPDATE RINGAN (FIX MASALAH SLIDER MACET)
+function updateImportPolyLineStyle() {
+    if(importLayer && typeof importLayer.setStyle === 'function') {
+        const style = getImportStyleValues();
+        importLayer.setStyle(style);
+    }
+}
+
+// 5. MAP ENGINE: MARKER (LOGIKA BARU)
+function initImportMarkerMap() {
+    if (typeof importMap !== 'undefined' && importMap !== null) {
+        importMap.off(); importMap.remove();
+    }
+
+    importMap = L.map('map_import_preview', { zoomControl: false, attributionControl: false }).setView(DEFAULT_COORD, 15);
+    L.tileLayer(GOOGLE_SAT_URL).addTo(importMap);
+
+    const style = getImportStyleValues();
+    const markerType = document.getElementById('import_marker_type').value;
+
+    if (markerType === 'circle') {
+        importLayer = L.circleMarker(DEFAULT_COORD, { 
+            color: style.color, weight: style.weight, opacity: style.opacity,
+            fillColor: style.fillColor, fillOpacity: style.fillOpacity, radius: 10 
+        }).addTo(importMap);
+    } 
+    else if (markerType === 'pin') {
+        importLayer = L.marker(DEFAULT_COORD).addTo(importMap);
+    } 
+    else {
+        // Custom Icon
+        let iconSrc = 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png';
+        if (tempImportIconUrl) {
+            iconSrc = tempImportIconUrl;
+        } else if (markerType === 'icon_url' && document.getElementById('import_icon_url').value) {
+            iconSrc = document.getElementById('import_icon_url').value;
+        }
+
+        const customIcon = L.icon({
+            iconUrl: iconSrc, iconSize: [32, 32], iconAnchor: [16, 32], popupAnchor: [0, -32]
+        });
+        importLayer = L.marker(DEFAULT_COORD, { icon: customIcon }).addTo(importMap);
+    }
+
+    setupImportListeners();
+    setTimeout(() => { importMap.invalidateSize(); }, 300);
+}
+
+// 6. EVENT LISTENERS (NON-DESTRUCTIVE)
+function setupImportListeners() {
+    // Gunakan 'oninput' agar tidak menumpuk listener lama (lebih aman dari cloneNode)
+    
+    // Inputs Standard
+    const inputs = ['import_style_color', 'import_style_weight', 'import_style_opacity', 'import_style_fillColor', 'import_style_fillOpacity', 'import_style_dashArray'];
+    inputs.forEach(id => {
+        const el = document.getElementById(id);
+        if(el) {
+            el.oninput = function() {
+                // False = Update Ringan (kecuali marker icon)
+                refreshImportPreview(false); 
+            };
+        }
+    });
+
+    // Marker Inputs (Butuh Re-init)
+    const elMarker = document.getElementById('import_marker_type');
+    if(elMarker) elMarker.onchange = () => { toggleImportUI(); refreshImportPreview(true); };
+    
+    const elUrl = document.getElementById('import_icon_url');
+    if(elUrl) elUrl.oninput = () => refreshImportPreview(true);
+    
+    const elFile = document.getElementById('import_icon_file');
+    if(elFile) elFile.onchange = function(e) {
+        const file = e.target.files[0];
+        if(file) {
+            tempImportIconUrl = URL.createObjectURL(file);
+            refreshImportPreview(true);
+        }
+    };
+}
+
+// Helper Ambil Value
+function getImportStyleValues() {
+    return {
+        color: document.getElementById('import_style_color').value,
+        weight: parseInt(document.getElementById('import_style_weight').value),
+        opacity: parseFloat(document.getElementById('import_style_opacity').value),
+        fillColor: document.getElementById('import_style_fillColor').value,
+        fillOpacity: parseFloat(document.getElementById('import_style_fillOpacity').value),
+        dashArray: document.getElementById('import_style_dashArray').value
+    };
+}
+
+function setImportDashPreset(val) {
+    const el = document.getElementById('import_style_dashArray');
+    if(el) { el.value = val; el.dispatchEvent(new Event('input')); }
 }
 </script>

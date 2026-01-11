@@ -272,7 +272,7 @@ class GeospasialController extends BaseController
     // =========================================================================
     // IMPORT (Menggunakan Stream agar RAM Aman)
     // =========================================================================
-    public function importGeoJSONGrup()
+public function importGeoJSONGrup()
     {
         ini_set('memory_limit', '-1'); 
         set_time_limit(0);
@@ -281,9 +281,25 @@ class GeospasialController extends BaseController
         $namaGrup = $this->request->getPost('nama_grup');
         $colMap   = $this->request->getPost('column_name_map');
 
+        // --- 1. LOGIKA BARU: TANGKAP STYLE MARKER ---
+        $markerType = $this->request->getPost('marker_type') ?? 'circle';
+        $markerIconDB = null;
+
+        if ($markerType === 'icon_url') {
+            $markerIconDB = $this->request->getPost('icon_url_input');
+        } elseif ($markerType === 'icon_file') {
+            $fileIcon = $this->request->getFile('icon_file_input');
+            if ($fileIcon && $fileIcon->isValid() && !$fileIcon->hasMoved()) {
+                $newName = $fileIcon->getRandomName();
+                $fileIcon->move('uploads/icons', $newName);
+                $markerIconDB = $newName;
+            }
+        }
+        // ----------------------------------------
+
         if ($file && $file->isValid()) {
             
-            // Cek Header manual untuk deteksi jenis
+            // Deteksi Jenis Peta (Berdasarkan Header File)
             $handle = fopen($file->getTempName(), 'r');
             $header = fread($handle, 1000); 
             fclose($handle);
@@ -294,27 +310,34 @@ class GeospasialController extends BaseController
 
             $this->db->transStart();
 
+            // 2. INSERT DATA GRUP LENGKAP (TERMASUK MARKER)
             $this->grupModel->insert([
                 'nama_grup'   => $namaGrup,
                 'jenis_peta'  => $jenisPeta,
                 'label_column'=> $colMap,
+                
+                // Style Standard
                 'color'       => $this->request->getPost('color'),
                 'weight'      => $this->request->getPost('weight'),
                 'opacity'     => $this->request->getPost('opacity'),
                 'fillColor'   => $this->request->getPost('fillColor'),
                 'fillOpacity' => $this->request->getPost('fillOpacity'),
                 'dashArray'   => $this->request->getPost('dashArray'),
+                
+                // Style Marker (Baru)
+                'marker_type' => $markerType,
+                'marker_icon' => $markerIconDB
             ]);
             $idGrup = $this->grupModel->getInsertID();
 
+            // 3. PARSING DATA GEOJSON (Sama seperti sebelumnya)
             if ($jenisPeta == 'Line') $targetModel = $this->lineModel;
             elseif ($jenisPeta == 'Point') $targetModel = $this->pointModel;
             else $targetModel = $this->poligonModel;
 
-            // STREAMING PARSE
-            $features = Items::fromFile($file->getTempName(), [
+            $features = \JsonMachine\Items::fromFile($file->getTempName(), [
                 'pointer' => '/features',
-                'decoder' => new ExtJsonDecoder(true)
+                'decoder' => new \JsonMachine\JsonDecoder\ExtJsonDecoder(true)
             ]);
 
             $batchData = [];

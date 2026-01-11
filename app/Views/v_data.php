@@ -114,22 +114,10 @@
                 </a>
             </li>
         </ul>
-
-        <div class="tab-content mt-3">
-            <?php if($activeTab == 'polygon'): ?>
-                <?php foreach($grupPolygon as $grup): ?><?php endforeach; ?>
-            
-            <?php elseif($activeTab == 'line'): ?>
-                <?php foreach($grupLine as $grup): ?><?php endforeach; ?>
-
-            <?php elseif($activeTab == 'point'): ?>
-                <?php foreach($grupPoint as $grup): ?><?php endforeach; ?>
-            <?php endif; ?>
-        </div>
     </div>
 
     <div class="tab-content p-4">
-        <div class="tab-pane fade show active" id="polygon-pane">
+        <div class="tab-pane fade <?= ($activeTab == 'polygon') ? 'show active' : '' ?>" id="polygon-pane">
             <div class="row align-items-center mb-4">
                 <div class="col">
                     <button class="btn btn-primary px-4 fw-bold mb-2" onclick="openGrupModal()" style="background: var(--primary); border:none;">
@@ -165,7 +153,7 @@
                         <div class="accordion-body">
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <div class="btn-group shadow-sm">
-                                    <button class="btn btn-sm btn-light border" onclick='openGrupModal(<?= json_encode($grup) ?>)'><i class="fas fa-palette me-1"></i> Style</button>
+                                    <button class="btn btn-sm btn-light border" onclick='openGrupModal(<?= json_encode($grup) ?>, "Polygon")'><i class="fas fa-palette me-1"></i> Style</button>
                                     <button class="btn btn-sm btn-light border text-danger" onclick="deleteGrup(<?= $grup['id_dg'] ?>)"><i class="fas fa-trash"></i></button>
                                 </div>
                                     <div class="d-flex align-items-center gap-2">
@@ -250,12 +238,21 @@
             </div>
         </div>
 
-        <div class="tab-pane fade" id="line-pane">
+        <div class="tab-pane fade <?= ($activeTab == 'line') ? 'show active' : '' ?>" id="line-pane">
             <div class="row align-items-center mb-4">
                 <div class="col">
-                    <button class="btn btn-primary px-4 fw-bold mb-2" onclick="openGrupModal(null, 'line')" style="background: var(--primary); border:none;">
+                    <button class="btn btn-primary px-4 fw-bold mb-2" onclick="openGrupModal(null, 'Line')" style="background: var(--primary); border:none;">
                         <i class="fas fa-layer-group me-2"></i>Grup Line Baru
                     </button>
+                    <button class="btn btn-outline-primary px-4 fw-bold mb-2" onclick="openImportGrupModal()">
+                        <i class="fas fa-file-import me-2"></i>Import GeoJSON Grup
+                    </button>
+                </div>
+                <div class="col-auto">
+                    <div class="input-group" style="width: 300px;">
+                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-search"></i></span>
+                        <input type="text" id="searchGroupInputLine" class="form-control border-start-0 ps-0" placeholder="Cari kategori line...">
+                    </div>
                 </div>
             </div>
             
@@ -265,12 +262,13 @@
                     <h2 class="accordion-header">
                         <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseLine<?= $grup['id_dg'] ?>">
                             <div class="d-flex align-items-center w-100">
-                                <div class="me-3 d-flex align-items-center justify-content-center" style="width: 45px; height: 22px; background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px;">
+                                <div class="me-3 d-flex align-items-center justify-content-center" 
+                                    style="width: 45px; height: 22px; background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px;">
                                     <div style="width: 80%; height: 0; border-top: <?= $grup['weight'] ?>px <?= !empty($grup['dashArray']) ? 'dashed' : 'solid' ?> <?= $grup['color'] ?>;"></div>
                                 </div>
                                 <div class="flex-grow-1">
                                     <span class="grup-name text-dark"><?= $grup['nama_grup'] ?></span>
-                                    <div class="text-muted fw-normal" style="font-size: 0.7rem;"><?= count($grup['items']) ?> Data Line</div>
+                                    <div class="text-muted fw-normal" style="font-size: 0.7rem;"><?= count($grup['items']) ?> Jalur Terdata</div>
                                 </div>
                             </div>
                         </button>
@@ -279,16 +277,27 @@
                         <div class="accordion-body">
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <div class="btn-group shadow-sm">
-                                    <button class="btn btn-sm btn-light border" onclick='openGrupModal(<?= json_encode($grup) ?>, "line")'><i class="fas fa-palette me-1"></i> Style</button>
+                                    <button class="btn btn-sm btn-light border" onclick='openGrupModal(<?= json_encode($grup) ?>, "Line")'><i class="fas fa-palette me-1"></i> Style</button>
                                     <button class="btn btn-sm btn-light border text-danger" onclick="deleteGrup(<?= $grup['id_dg'] ?>)"><i class="fas fa-trash"></i></button>
                                 </div>
-                                <button class="btn btn-sm btn-primary shadow-sm px-3" onclick='openAddLine(<?= $grup["id_dg"] ?>, <?= json_encode($grup) ?>)'>
-                                    <i class="fas fa-plus-circle me-1"></i> Tambah Line
-                                </button>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="position-relative">
+                                        <i class="fas fa-search position-absolute text-muted" style="left: 10px; top: 50%; transform: translateY(-50%); font-size: 0.8rem;"></i>
+                                        <input type="text" class="form-control form-control-sm search-in-group" 
+                                            placeholder="Cari..." style="width: 140px; padding-left: 30px; border-radius: 6px;">
+                                    </div>
+                                    <button class="btn btn-sm btn-outline-dark shadow-sm px-2" 
+                                            onclick="doExportAJAX(<?= $grup['id_dg'] ?>, '<?= $grup['nama_grup'] ?>', this)" title="Export ke GeoJSON">
+                                        <i class="fas fa-file-export text-success"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-primary shadow-sm px-3" onclick='openAddLine(<?= $grup["id_dg"] ?>, <?= json_encode($grup) ?>)'>
+                                        <i class="fas fa-plus-circle me-1"></i> Tambah
+                                    </button>
+                                </div>
                             </div>
                             <div class="table-responsive">
                                 <table class="table table-hover align-middle table-in-group border">
-                                    <thead><tr><th width="60">ID</th><th>Nama Jalur</th><th>Atribut</th><th width="120" class="text-center">Aksi</th></tr></thead>
+                                    <thead><tr><th width="60">ID</th><th>Nama Jalur</th><th>Atribut</th><th class="text-center">PDF</th><th width="120" class="text-center">Aksi</th></tr></thead>
                                     <tbody>
                                         <?php if(!empty($grup['items'])): foreach($grup['items'] as $item): ?>
                                         <tr class="item-row">
@@ -301,92 +310,125 @@
                                                 ?>
                                             </td>
                                             <td class="text-center">
+                                                <?php if(!empty($item['daftar_pdf'])): foreach($item['daftar_pdf'] as $pdf): ?>
+                                                    <a href="<?= base_url('uploads/pdf/'.$pdf['file_path']) ?>" target="_blank" class="btn btn-xs btn-outline-danger" title="<?= $pdf['judul_pdf'] ?>"><i class="fas fa-file-pdf"></i></a>
+                                                <?php endforeach; else: echo "-"; endif; ?>
+                                            </td>
+                                            <td class="text-center">
                                                 <button class="btn btn-xs btn-light border text-warning" onclick='openEditLine(<?= json_encode($item) ?>, <?= json_encode($grup) ?>)'><i class="fas fa-edit"></i></button>
                                                 <button class="btn btn-xs btn-light border text-danger" onclick="deleteData('line', <?= $item['id'] ?>)"><i class="fas fa-trash"></i></button>
                                             </td>
                                         </tr>
-                                        <?php endforeach; endif; ?>
+                                        <?php endforeach; else: ?>
+                                            <tr class="no-data"><td colspan="5" class="text-center py-4 text-muted small">Belum ada data di grup ini.</td></tr>
+                                        <?php endif; ?>
+                                        <tr class="search-no-result" style="display: none;"><td colspan="5" class="text-center py-3 text-muted">Data tidak ditemukan.</td></tr>
                                     </tbody>
                                 </table>
                             </div>
                         </div>
                     </div>
                 </div>
-                <?php endforeach; endif; ?>
+                <?php endforeach; else: ?>
+                    <div class="alert alert-light border text-center py-5">
+                        <i class="fas fa-route fa-3x text-muted mb-3 d-block"></i>
+                        <span class="text-muted">Belum ada grup Line yang dibuat.</span>
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
 
-        <div class="tab-pane fade" id="point-pane">
-            <div class="row align-items-center mb-4">
-                <div class="col">
-                    <button class="btn btn-primary px-4 fw-bold mb-2" onclick="openGrupModal(null, 'point')" style="background: var(--primary); border:none;">
-                        <i class="fas fa-layer-group me-2"></i>Grup Point Baru
-                    </button>
+            <div class="tab-pane fade <?= ($activeTab == 'point') ? 'show active' : '' ?>" id="point-pane">
+        <div class="row align-items-center mb-4">
+            <div class="col">
+                <button class="btn btn-primary px-4 fw-bold mb-2" onclick="openGrupModal(null, 'Point')" style="background: var(--primary); border:none;">
+                    <i class="fas fa-layer-group me-2"></i>Grup Point Baru
+                </button>
+                <button class="btn btn-outline-primary px-4 fw-bold mb-2" onclick="openImportGrupModal()">
+                    <i class="fas fa-file-import me-2"></i>Import GeoJSON Grup
+                </button>
+            </div>
+            <div class="col-auto">
+                <div class="input-group" style="width: 300px;">
+                    <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-search"></i></span>
+                    <input type="text" id="searchGroupInputPoint" class="form-control border-start-0 ps-0" placeholder="Cari kategori point...">
                 </div>
             </div>
+        </div>
 
-            <div class="accordion scrollable-area" id="accordionPoint">
-                <?php if(!empty($grupPoint)): foreach($grupPoint as $grup): ?>
-                <div class="accordion-item grup-item shadow-sm">
-                    <h2 class="accordion-header">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePoint<?= $grup['id_dg'] ?>">
-                            <div class="d-flex align-items-center w-100">
-                                <div class="me-3 d-flex align-items-center justify-content-center" style="width: 45px; height: 22px;">
-                                    <i class="fas fa-map-marker-alt" style="color: <?= $grup['color'] ?>;"></i>
-                                </div>
-                                <div class="flex-grow-1">
-                                    <span class="grup-name text-dark"><?= $grup['nama_grup'] ?></span>
-                                    <div class="text-muted fw-normal" style="font-size: 0.7rem;"><?= count($grup['items']) ?> Data Point</div>
-                                </div>
+        <div class="accordion scrollable-area" id="accordionPoint">
+            <?php if(!empty($grupPoint)): foreach($grupPoint as $grup): ?>
+            <div class="accordion-item grup-item shadow-sm">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePoint<?= $grup['id_dg'] ?>">
+                        <div class="d-flex align-items-center w-100">
+                            <div class="me-3 d-flex align-items-center justify-content-center" style="width: 45px; height: 22px;">
+                                <i class="fas fa-map-marker-alt" style="color: <?= $grup['color'] ?>;"></i>
                             </div>
-                        </button>
-                    </h2>
-                    <div id="collapsePoint<?= $grup['id_dg'] ?>" class="accordion-collapse collapse">
-                        <div class="accordion-body">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <div class="btn-group shadow-sm">
-                                    <button class="btn btn-sm btn-light border" onclick='openGrupModal(<?= json_encode($grup) ?>, "point")'><i class="fas fa-palette me-1"></i> Style</button>
-                                    <button class="btn btn-sm btn-light border text-danger" onclick="deleteGrup(<?= $grup['id_dg'] ?>)"><i class="fas fa-trash"></i></button>
+                            <div class="flex-grow-1">
+                                <span class="grup-name text-dark"><?= $grup['nama_grup'] ?></span>
+                                <div class="text-muted fw-normal" style="font-size: 0.7rem;"><?= count($grup['items']) ?> Lokasi Terdata</div>
+                            </div>
+                        </div>
+                    </button>
+                </h2>
+                <div id="collapsePoint<?= $grup['id_dg'] ?>" class="accordion-collapse collapse">
+                    <div class="accordion-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="btn-group shadow-sm">
+                                <button class="btn btn-sm btn-light border" onclick='openGrupModal(<?= json_encode($grup) ?>, "Point")'><i class="fas fa-palette me-1"></i> Style</button>
+                                <button class="btn btn-sm btn-light border text-danger" onclick="deleteGrup(<?= $grup['id_dg'] ?>)"><i class="fas fa-trash"></i></button>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="position-relative">
+                                    <i class="fas fa-search position-absolute text-muted" style="left: 10px; top: 50%; transform: translateY(-50%); font-size: 0.8rem;"></i>
+                                    <input type="text" class="form-control form-control-sm search-in-group" placeholder="Cari..." style="width: 140px; padding-left: 30px; border-radius: 6px;">
                                 </div>
-                                <button class="btn btn-sm btn-primary shadow-sm px-3" onclick='openAddPoint(<?= $grup["id_dg"] ?>, <?= json_encode($grup) ?>)'>
-                                    <i class="fas fa-plus-circle me-1"></i> Tambah Point
-                                </button>
+                                <button class="btn btn-sm btn-outline-dark shadow-sm px-2" onclick="doExportAJAX(<?= $grup['id_dg'] ?>, '<?= $grup['nama_grup'] ?>', this)" title="Export"><i class="fas fa-file-export text-success"></i></button>
+                                <button class="btn btn-sm btn-primary shadow-sm px-3" onclick='openAddPoint(<?= $grup["id_dg"] ?>, <?= json_encode($grup) ?>)'><i class="fas fa-plus-circle me-1"></i> Tambah</button>
                             </div>
-                            <div class="table-responsive">
-                                <table class="table table-hover align-middle table-in-group border">
-                                    <thead><tr><th width="60">ID</th><th>Nama Lokasi</th><th>Koordinat (Lat, Lng)</th><th width="120" class="text-center">Aksi</th></tr></thead>
-                                    <tbody>
-                                        <?php if(!empty($grup['items'])): foreach($grup['items'] as $item): ?>
-                                        <tr class="item-row">
-                                            <td class="text-center text-muted small"><?= $item['id'] ?></td>
-                                            <td class="fw-bold itemName"><?= $item['nama_display'] ?></td>
-                                            <td class="small text-muted">
-                                                <?php 
-                                                    // Extract koordinat sederhana untuk preview
-                                                    $geo = json_decode($item['data_geospasial'], true);
-                                                    if(isset($geo['geometry']['coordinates'])) {
-                                                        $c = $geo['geometry']['coordinates'];
-                                                        echo number_format($c[1], 5) . ", " . number_format($c[0], 5);
-                                                    } else echo "-";
-                                                ?>
-                                            </td>
-                                            <td class="text-center">
-                                                <button class="btn btn-xs btn-light border text-warning" onclick='openEditPoint(<?= json_encode($item) ?>, <?= json_encode($grup) ?>)'><i class="fas fa-edit"></i></button>
-                                                <button class="btn btn-xs btn-light border text-danger" onclick="deleteData('point', <?= $item['id'] ?>)"><i class="fas fa-trash"></i></button>
-                                            </td>
-                                        </tr>
-                                        <?php endforeach; endif; ?>
-                                    </tbody>
-                                </table>
-                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle table-in-group border">
+                                <thead><tr><th width="60">ID</th><th>Nama Lokasi</th><th>Koordinat</th><th class="text-center">PDF</th><th width="120" class="text-center">Aksi</th></tr></thead>
+                                <tbody>
+                                    <?php if(!empty($grup['items'])): foreach($grup['items'] as $item): ?>
+                                    <tr class="item-row">
+                                        <td class="text-center text-muted small"><?= $item['id'] ?></td>
+                                        <td class="fw-bold itemName"><?= $item['nama_display'] ?></td>
+                                        <td class="small text-muted">
+                                            <?php 
+                                                $geo = json_decode($item['data_geospasial'], true);
+                                                if(isset($geo['geometry']['coordinates'])) {
+                                                    echo number_format($geo['geometry']['coordinates'][1], 5) . ", " . number_format($geo['geometry']['coordinates'][0], 5);
+                                                } else echo "-";
+                                            ?>
+                                        </td>
+                                        <td class="text-center">
+                                            <?php if(!empty($item['daftar_pdf'])): foreach($item['daftar_pdf'] as $pdf): ?>
+                                                <a href="<?= base_url('uploads/pdf/'.$pdf['file_path']) ?>" target="_blank" class="btn btn-xs btn-outline-danger"><i class="fas fa-file-pdf"></i></a>
+                                            <?php endforeach; else: echo "-"; endif; ?>
+                                        </td>
+                                        <td class="text-center">
+                                            <button class="btn btn-xs btn-light border text-warning" onclick='openEditPoint(<?= json_encode($item) ?>, <?= json_encode($grup) ?>)'><i class="fas fa-edit"></i></button>
+                                            <button class="btn btn-xs btn-light border text-danger" onclick="deleteData('point', <?= $item['id'] ?>)"><i class="fas fa-trash"></i></button>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; else: ?>
+                                        <tr class="no-data"><td colspan="5" class="text-center py-4 text-muted small">Belum ada data.</td></tr>
+                                    <?php endif; ?>
+                                    <tr class="search-no-result" style="display: none;"><td colspan="5" class="text-center py-3 text-muted">Data tidak ditemukan.</td></tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
-                <?php endforeach; endif; ?>
             </div>
+            <?php endforeach; else: ?>
+                <div class="alert alert-light border text-center py-5"><i class="fas fa-map-marker-alt fa-3x text-muted mb-3 d-block"></i><span class="text-muted">Belum ada grup Point.</span></div>
+            <?php endif; ?>
         </div>
     </div>
-</div>
 
 <div class="modal fade" id="modalGrup" tabindex="-1">
     <div class="modal-dialog modal-xl">
@@ -398,6 +440,7 @@
                 </div>
                 <div class="modal-body p-4">
                     <input type="hidden" name="id_dg" id="grup_id">
+                    <input type="hidden" name="jenis_peta" id="grup_jenis_peta">
                     <div class="row">
                         <div class="col-md-4 border-end">
                             <div class="mb-3">
@@ -414,11 +457,15 @@
                                     Pilih atribut dari GeoJSON untuk dijadikan Nama Utama di tabel secara otomatis.
                                 </small>
                             </div>
-                            <label class="form-label fw-bold small">Template Atribut</label>
-                            <div id="template_container" class="mb-3"></div>
-                            <button type="button" class="btn btn-sm btn-outline-primary w-100" onclick="addTemplateRow()">
-                                <i class="fas fa-plus me-1"></i> Tambah Kolom Template
-                            </button>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold small">Template Atribut</label>
+                                    
+                                    <div id="template_container" class="mb-2"></div>
+
+                                    <button type="button" class="btn btn-sm btn-outline-primary w-100" onclick="addTemplateRow()">
+                                        <i class="fas fa-plus me-1"></i> Tambah Kolom Template
+                                    </button>
+                                </div>
                         </div>
                         <div class="col-md-4 border-end">
                             <h6 class="fw-bold mb-3 small">Visualisasi Peta</h6>
@@ -529,7 +576,9 @@
                     <div class="row">
                         <div class="col-md-4 border-end">
                             <div class="mb-3">
-                                <label class="form-label fw-bold small">Nama Grup Baru</label>
+                            <button class="btn btn-primary ..." onclick="openGrupModal(null, 'Polygon')">
+                                    <i class="fas fa-layer-group me-2"></i>Grup Baru
+                                </button>
                                 <input type="text" name="nama_grup" class="form-control" required placeholder="Contoh: Batas Administrasi RT">
                             </div>
                                 <div class="mb-3">
@@ -681,14 +730,28 @@ document.addEventListener('DOMContentLoaded', function () {
     const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     tooltipTriggerList.map(t => new bootstrap.Tooltip(t));
 
-    // Global Search Group
-    document.getElementById('searchGroupInput')?.addEventListener('keyup', function(e) {
-        const term = e.target.value.toLowerCase();
-        document.querySelectorAll('.grup-item').forEach(g => {
-            const name = g.querySelector('.grup-name').textContent.toLowerCase();
-            g.style.display = name.includes(term) ? '' : 'none';
+// Fungsi Search Universal
+    function setupSearch(inputId, itemClass) {
+        const input = document.getElementById(inputId);
+        if(!input) return;
+        
+        input.addEventListener('keyup', function(e) {
+            const term = e.target.value.toLowerCase();
+            // Cari accordion item di dalam pane yang aktif
+            const paneId = input.closest('.tab-pane').id; 
+            const items = document.querySelectorAll(`#${paneId} .grup-item`);
+            
+            items.forEach(g => {
+                const name = g.querySelector('.grup-name').textContent.toLowerCase();
+                g.style.display = name.includes(term) ? '' : 'none';
+            });
         });
-    });
+    }
+
+    // Daftarkan ke 3 Search Bar
+    setupSearch('searchGroupInput', '.grup-item');      // Polygon (ID lama)
+    setupSearch('searchGroupInputLine', '.grup-item');  // Line
+    setupSearch('searchGroupInputPoint', '.grup-item'); // Point
 
     // In-Group Search
     document.addEventListener('keyup', function(e) {
@@ -708,60 +771,98 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 // --- LOGIC GRUP ---
-function openGrupModal(data = null) {
+// Variabel Global untuk menyimpan tipe saat ini agar preview real-time tahu harus gambar apa
+let currentGrupType = 'Polygon'; 
+
+function openGrupModal(data = null, type = 'Polygon') {
     const modalEl = document.getElementById('modalGrup');
     const form = modalEl.querySelector('form');
+    
+    // 1. Reset Form & Container
     form.reset();
     document.getElementById('template_container').innerHTML = '';
     
-    // Reset dropdown label
+    // 2. Set Tipe Peta ke Input Hidden & Variabel Global
+    document.getElementById('grup_jenis_peta').value = type;
+    currentGrupType = type; // Simpan tipe untuk dipakai di initStyleMap
+
+    // 3. Reset Dropdown Label
     const labelSelect = document.getElementById('style_label_column');
     labelSelect.innerHTML = '<option value="">-- Gunakan Nama Manual --</option>';
 
-    let style = { color:'#3388ff', weight:3, opacity:1, fillColor:'#3388ff', fillOpacity:0.2, dashArray:'' };
+    // 4. Default Style
+    let style = { 
+        color: '#3388ff', weight: 3, opacity: 1, 
+        fillColor: '#3388ff', fillOpacity: 0.2, 
+        dashArray: '', radius: 10 
+    };
 
+    // 5. Isi Data jika Mode Edit
     if(data) {
         document.getElementById('grup_id').value = data.id_dg;
         document.getElementById('grup_nama').value = data.nama_grup;
-        style = { color:data.color, weight:data.weight, opacity:data.opacity, fillColor:data.fillColor, fillOpacity:data.fillOpacity, dashArray:data.dashArray || '' };
+        // Pastikan tipe diambil dari data jika tersedia, atau dari parameter
+        currentGrupType = data.jenis_peta || type; 
+        document.getElementById('grup_jenis_peta').value = currentGrupType;
+
+        style = { 
+            color: data.color, weight: data.weight, opacity: data.opacity, 
+            fillColor: data.fillColor, fillOpacity: data.fillOpacity, 
+            dashArray: data.dashArray || '', radius: data.radius || 10
+        };
         
-        // --- MODIFIKASI DI SINI: MENAMPILKAN CONTOH DATA ---
+        // Load sampel atribut untuk dropdown label
         if(data.items && data.items.length > 0) {
             try {
-                // Ambil atribut dari item pertama sebagai sampel kolom
                 const sampleAttrs = JSON.parse(data.items[0].atribut_tambahan);
-                
                 sampleAttrs.forEach(attr => {
                     const opt = document.createElement('option');
                     opt.value = attr.label;
-                    
-                    // Tampilkan Label + Contoh Nilainya
-                    // Contoh: "KECAMATAN (Contoh: NGAWI)"
-                    let contohValue = attr.value ? ` (Contoh: ${attr.value})` : ' (Kosong)';
-                    opt.text = attr.label + contohValue;
-                    
+                    let contoh = attr.value ? ` (Contoh: ${attr.value})` : '';
+                    opt.text = attr.label + contoh;
                     if(data.label_column === attr.label) opt.selected = true;
                     labelSelect.appendChild(opt);
                 });
-            } catch(e) { 
-                console.error("Gagal parse atribut untuk label", e); 
-            }
+            } catch(e) {}
         }
-        // ---------------------------------------------------
 
         try { JSON.parse(data.atribut_default).forEach(x => addTemplateRow(x.label)); } catch(e){}
     } else {
         document.getElementById('grup_id').value = '';
-        addTemplateRow();
+        addTemplateRow(); // Row kosong default
     }
 
-    // Terapkan style ke input
+    // 6. Set Nilai ke Input Form Style
     Object.keys(style).forEach(key => { 
         if(document.getElementById('style_'+key)) document.getElementById('style_'+key).value = style[key]; 
     });
 
+    // 7. Tampilkan Modal
     bootstrap.Modal.getOrCreateInstance(modalEl).show();
-    modalEl.addEventListener('shown.bs.modal', () => initStyleMap(style), { once: true });
+    
+    // --- LOGIKA SEMBUNYIKAN STYLE YG TIDAK PERLU ---
+    // Kita ambil elemen parent (col-6) dari input tersebut
+    const fillContainer = document.getElementById('style_fillColor').closest('.col-6');
+    const fillOpContainer = document.getElementById('style_fillOpacity').closest('.col-6');
+    const dashContainer = document.getElementById('style_dashArray').closest('.col-12'); // Tetap ditampilkan untuk line/poly
+
+    // Reset dulu (tampilkan semua)
+    fillContainer.style.display = 'block';
+    fillOpContainer.style.display = 'block';
+
+    // Jika LINE, sembunyikan Fill Color & Fill Opacity
+    if (currentGrupType === 'Line') {
+        fillContainer.style.display = 'none';
+        fillOpContainer.style.display = 'none';
+    } 
+    // Jika POINT, kita sembunyikan Dash Array (opsional, karena titik jarang putus-putus)
+    else if (currentGrupType === 'Point') {
+        // Point butuh Fill & Stroke, tapi Dash Array jarang dipakai untuk marker
+        // dashContainer.style.display = 'none'; // Aktifkan jika ingin sembunyikan dash array untuk point
+    }
+
+    // Render peta
+    modalEl.addEventListener('shown.bs.modal', () => initStyleMap(style, currentGrupType), { once: true });
 }
 
 function addTemplateRow(val = '') {
@@ -771,31 +872,75 @@ function addTemplateRow(val = '') {
     document.getElementById('template_container').appendChild(div);
 }
 
-function initStyleMap(style) {
-    if (styleMap) styleMap.remove();
-    styleMap = L.map('map_style_preview', { zoomControl: false }).setView(DEFAULT_COORD, 13);
+// --- FUNGSI PREVIEW STYLE (INIT STYLE MAP) ---
+function initStyleMap(style, type) {
+    // Hapus map lama jika ada
+    if (styleMap) {
+        styleMap.off();
+        styleMap.remove();
+    }
+
+    // Inisialisasi Peta Baru
+    styleMap = L.map('map_style_preview', { zoomControl: false, attributionControl: false }).setView(DEFAULT_COORD, 13);
     L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}').addTo(styleMap);
     
-    styleLayer = L.polygon([[DEFAULT_COORD[0]+0.01, DEFAULT_COORD[1]-0.01], [DEFAULT_COORD[0]-0.01, DEFAULT_COORD[1]+0.01], [DEFAULT_COORD[0]-0.01, DEFAULT_COORD[1]-0.02]], style).addTo(styleMap);
-    styleMap.fitBounds(styleLayer.getBounds(), { padding: [10,10] });
+    // Tentukan Geometri berdasarkan Tipe
+    if (type === 'Line') {
+        // Gambar GARIS (Zig-zag)
+        const lineCoords = [
+            [DEFAULT_COORD[0], DEFAULT_COORD[1] - 0.02],
+            [DEFAULT_COORD[0] + 0.01, DEFAULT_COORD[1]],
+            [DEFAULT_COORD[0], DEFAULT_COORD[1] + 0.02]
+        ];
+        styleLayer = L.polyline(lineCoords, style).addTo(styleMap);
+        
+    } else if (type === 'Point') {
+        // Gambar TITIK (Circle Marker agar warna/radius terlihat)
+        // Kita pakai CircleMarker karena Marker biasa (Pin) tidak bisa diubah warnanya lewat CSS sederhana
+        styleLayer = L.circleMarker(DEFAULT_COORD, style).addTo(styleMap);
+        
+    } else {
+        // Gambar POLIGON (Segitiga) - Default
+        const polyCoords = [
+            [DEFAULT_COORD[0] + 0.01, DEFAULT_COORD[1] - 0.01], 
+            [DEFAULT_COORD[0] - 0.01, DEFAULT_COORD[1] + 0.01], 
+            [DEFAULT_COORD[0] - 0.01, DEFAULT_COORD[1] - 0.02]
+        ];
+        styleLayer = L.polygon(polyCoords, style).addTo(styleMap);
+    }
 
-    // Daftar ID input yang akan dipantau perubahannya
+    // Fit Bounds agar objek terlihat di tengah
+    if (type === 'Point') {
+        styleMap.setView(DEFAULT_COORD, 15);
+    } else {
+        styleMap.fitBounds(styleLayer.getBounds(), { padding: [20, 20] });
+    }
+
+    // --- LISTENER PERUBAHAN INPUT STYLE ---
+    // Agar saat user geser warna/tebal, peta langsung berubah realtime
     const styleInputs = ['style_color', 'style_weight', 'style_opacity', 'style_fillColor', 'style_fillOpacity', 'style_dashArray'];
     
     styleInputs.forEach(id => {
         const el = document.getElementById(id);
         if(!el) return;
 
-        // Gunakan event 'input' agar perubahan teks langsung terlihat di peta tanpa nunggu blur/lose focus
-        el.addEventListener('input', () => {
-            styleLayer.setStyle({
+        // Hapus listener lama (clone node hack) agar tidak double trigger
+        const newEl = el.cloneNode(true);
+        el.parentNode.replaceChild(newEl, el);
+
+        newEl.addEventListener('input', () => {
+            const newStyle = {
                 color: document.getElementById('style_color').value,
-                weight: document.getElementById('style_weight').value,
-                opacity: document.getElementById('style_opacity').value,
+                weight: parseInt(document.getElementById('style_weight').value),
+                opacity: parseFloat(document.getElementById('style_opacity').value),
                 fillColor: document.getElementById('style_fillColor').value,
-                fillOpacity: document.getElementById('style_fillOpacity').value,
-                dashArray: document.getElementById('style_dashArray').value // Mengambil string dari input teks
-            });
+                fillOpacity: parseFloat(document.getElementById('style_fillOpacity').value),
+                dashArray: document.getElementById('style_dashArray').value,
+                radius: 10 // Default radius untuk point preview
+            };
+            
+            // Terapkan style baru ke layer
+            styleLayer.setStyle(newStyle);
         });
     });
 }
@@ -1259,18 +1404,30 @@ function editLine(id, idGrup) {
             
             // Load GeoJSON ke Peta
             if(data.data_geospasial) {
-                var geo = JSON.parse(data.data_geospasial);
-                var layer = L.geoJSON(geo).getLayers()[0]; 
-                var latlngs = layer.getLatLngs();
-                
-                latlngs.forEach(ll => {
-                    var m = L.marker(ll, {draggable:true}).addTo(mapLine);
-                    lineMarkers.push(m);
-                    // Pasang event listener seperti di atas (drag/click)
-                    // ... (copy logic event listener marker line disini)
-                });
-                updateLineGeoJSON();
-                mapLine.fitBounds(layer.getBounds());
+                try {
+                    var geo = JSON.parse(data.data_geospasial);
+                    var layer = L.geoJSON(geo).getLayers()[0]; 
+                    var latlngs = layer.getLatLngs();
+                    
+                    // Render ulang marker dari data database
+                    latlngs.forEach(ll => {
+                        var m = L.marker(ll, {draggable:true}).addTo(mapLine);
+                        lineMarkers.push(m);
+                        
+                        // --- INI BAGIAN YANG ANDA LEWATKAN TADI ---
+                        // Event Listener agar marker bisa digeser/dihapus saat mode edit
+                        m.on('drag', updateLineGeoJSON);
+                        m.on('click', function() { 
+                            mapLine.removeLayer(this);
+                            lineMarkers = lineMarkers.filter(item => item !== this);
+                            updateLineGeoJSON();
+                        });
+                        // ------------------------------------------
+                    });
+                    
+                    updateLineGeoJSON(); // Gambar garis antar marker
+                    mapLine.fitBounds(layer.getBounds()); // Zoom ke lokasi
+                } catch(e) { console.error("Error parsing GeoJSON Line", e); }
             }
             
             var myModal = new bootstrap.Modal(document.getElementById('modalDataLine'));
